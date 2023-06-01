@@ -1936,12 +1936,8 @@ draw_circle_bresenham_thin(SDL_Surface *surf, int x0, int y0, int radius,
     int last_x = x;
     int y = radius;
 
-    while (x < y) {
+    while (x <= y) {
         if (f >= 0) {
-            y--;
-            ddF_y += 2;
-            f += ddF_y;
-            
             drawhorzlineclipbounding(surf, color, x0 + last_x - 1, y0 - y, x0 + x - 1, drawn_area);  /* 2 */
             drawhorzlineclipbounding(surf, color, x0 - x, y0 - y, x0 - last_x, drawn_area);  /* 3 */
             drawhorzlineclipbounding(surf, color, x0 + last_x - 1, y0 + y - 1, x0 + x - 1, drawn_area);  /* 7 */
@@ -1950,7 +1946,9 @@ draw_circle_bresenham_thin(SDL_Surface *surf, int x0, int y0, int radius,
             drawvertlineclipbounding(surf, color, y0 + x - 1, x0 + y - 1, y0 + last_x - 1, drawn_area);  /* 8 */
             drawvertlineclipbounding(surf, color, y0 - x, x0 - y, y0 - last_x, drawn_area);  /* 4 */
             drawvertlineclipbounding(surf, color, y0 + x - 1, x0 - y, y0 + last_x - 1, drawn_area);  /* 5 */
-
+            y--;
+            ddF_y += 2;
+            f += ddF_y;
             last_x = x + 1;
         }
         else {
