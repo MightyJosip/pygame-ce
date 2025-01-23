@@ -516,6 +516,23 @@ typedef struct {
 #define import_pygame_window() IMPORT_PYGAME_MODULE(window)
 #endif
 
+/*
+ * Texture module
+ */
+typedef struct {
+    PyObject_HEAD SDL_Texture *texture;
+    // TODO Add renderer after pgRendererObject implementation
+    // pgRendererObject *renderer;
+    int width;
+    int height;
+} pgTextureObject;
+#ifndef PYGAMEAPI_TEXTURE_INTERNAL
+#define pgTexture_Type (*(PyTypeObject *)PYGAMEAPI_GET_SLOT(_texture, 0))
+#define pgTexture_Check(x) \
+    (PyObject_IsInstance((x), (PyObject *)&pgTexture_Type))
+#define import_pygame_texture() IMPORT_PYGAME_MODULE(_texture)
+#endif
+
 #define IMPORT_PYGAME_MODULE _IMPORT_PYGAME_MODULE
 
 /*
@@ -535,6 +552,7 @@ PYGAMEAPI_DEFINE_SLOTS(pixelarray);
 PYGAMEAPI_DEFINE_SLOTS(color);
 PYGAMEAPI_DEFINE_SLOTS(math);
 PYGAMEAPI_DEFINE_SLOTS(window);
+PYGAMEAPI_DEFINE_SLOTS(_texture);
 PYGAMEAPI_DEFINE_SLOTS(geometry);
 #else /* ~PYGAME_H */
 PYGAMEAPI_EXTERN_SLOTS(base);
@@ -549,6 +567,7 @@ PYGAMEAPI_EXTERN_SLOTS(pixelarray);
 PYGAMEAPI_EXTERN_SLOTS(color);
 PYGAMEAPI_EXTERN_SLOTS(math);
 PYGAMEAPI_EXTERN_SLOTS(window);
+PYGAMEAPI_EXTERN_SLOTS(_texture);
 PYGAMEAPI_EXTERN_SLOTS(geometry);
 
 #endif /* ~PYGAME_H */
