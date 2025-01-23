@@ -521,7 +521,7 @@ typedef struct {
  */
 typedef struct {
     PyObject_HEAD SDL_Texture *texture;
-    // TODO Add renderer after pgRendererObject implementation
+    // TODO MightyJosip Add renderer after pgRendererObject implementation
     // pgRendererObject *renderer;
     int width;
     int height;
