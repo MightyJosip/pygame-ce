@@ -362,9 +362,9 @@ texture_update(pgTextureObject *self, PyObject *args, PyObject *kwargs) {
         area.h = surf->h;
     }
     TEXTURE_ERROR_CHECK(SDL_QueryTexture(self->texture, &format, NULL, NULL, NULL))
-    if (format != surf->format) {
+    pixel_format = SDL_AllocFormat(format);
+    if (pixel_format != surf->format) {
         TEXTURE_ERROR_CHECK(SDL_GetSurfaceBlendMode(surf, &blend))
-        pixel_format = SDL_AllocFormat(format);
         if (pixel_format == NULL) return RAISE(pgExc_SDLError, SDL_GetError());
         converted_surf = SDL_ConvertSurface(surf, pixel_format, 0);
         if (SDL_SetSurfaceBlendMode(converted_surf, blend) < 0) {
@@ -372,7 +372,6 @@ texture_update(pgTextureObject *self, PyObject *args, PyObject *kwargs) {
             SDL_FreeFormat(pixel_format);
             return RAISE(pgExc_SDLError, SDL_GetError());
         }
-
         res = SDL_UpdateTexture(self->texture, areaptr, converted_surf->pixels, converted_surf->pitch);
         SDL_FreeSurface(converted_surf);
         SDL_FreeFormat(pixel_format);
@@ -380,6 +379,7 @@ texture_update(pgTextureObject *self, PyObject *args, PyObject *kwargs) {
     else {
         res = SDL_UpdateTexture(self->texture, areaptr, surf->pixels, surf->pitch);
     }
+    SDL_FreeFormat(pixel_format);
     if (res < 0) return RAISE(pgExc_SDLError, SDL_GetError());
     Py_RETURN_NONE;
 }
@@ -469,21 +469,10 @@ texture_init(pgTextureObject *self, PyObject *args, PyObject *kwargs) {
         return -1;
     }
     if (scale_quality != -1) {
-#if SDL_VERSION_ATLEAST(2,0,12)
         if (SDL_SetTextureScaleMode(self->texture, scale_quality) < 0) {
             RAISE(pgExc_SDLError, SDL_GetError());
             return -1;
         }
-#else
-        switch (scale_quality) {
-            case 0:
-                SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest"); break;
-            case 1:
-                SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear"); break;
-            case 2:
-                SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best"); break;
-        }
-#endif
     }
     self->width = width;
     self->height = height;
