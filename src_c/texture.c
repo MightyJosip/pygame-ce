@@ -362,7 +362,7 @@ texture_update(pgTextureObject *self, PyObject *args, PyObject *kwargs) {
         area.h = surf->h;
     }
     TEXTURE_ERROR_CHECK(SDL_QueryTexture(self->texture, &format, NULL, NULL, NULL))
-    if (format != surf->format->format) {
+    if (format != surf->format) {
         TEXTURE_ERROR_CHECK(SDL_GetSurfaceBlendMode(surf, &blend))
         pixel_format = SDL_AllocFormat(format);
         if (pixel_format == NULL) return RAISE(pgExc_SDLError, SDL_GetError());
