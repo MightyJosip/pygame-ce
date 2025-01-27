@@ -231,8 +231,6 @@ transform = py.extension_module(
 )
 endif
 
-# TODO: support SDL3
-if sdl_api != 3
 mask = py.extension_module(
     'mask',
     ['mask.c', 'bitmask.c'],
@@ -241,7 +239,6 @@ mask = py.extension_module(
     install: true,
     subdir: pg,
 )
-endif
 
 bufferproxy = py.extension_module(
     'bufferproxy',
@@ -273,8 +270,6 @@ math = py.extension_module(
     subdir: pg,
 )
 
-# TODO: support SDL3
-if sdl_api != 3
 pixelcopy = py.extension_module(
     'pixelcopy',
     'pixelcopy.c',
@@ -283,7 +278,6 @@ pixelcopy = py.extension_module(
     install: true,
     subdir: pg,
 )
-endif
 
 newbuffer = py.extension_module(
     'newbuffer',
@@ -313,8 +307,6 @@ geometry = py.extension_module(
     subdir: pg,
 )
 
-# TODO: support SDL3
-if sdl_api != 3
 window = py.extension_module(
     'window',
     'window.c',
@@ -323,7 +315,6 @@ window = py.extension_module(
     install: true,
     subdir: pg,
 )
-endif
 
 # TODO: support SDL3
 if sdl_api != 3
