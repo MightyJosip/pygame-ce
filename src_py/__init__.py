@@ -332,6 +332,10 @@ except (ImportError, OSError):
     def Window(title="pygame window", size=(640, 480), position=None, **kwargs):  # pylint: disable=unused-argument
         _attribute_undefined("pygame.Window")
 
+try:
+    import pygame._renderer
+except (ImportError, OSError):
+    _renderer = MissingModule("_renderer", urgent=0)
 
 try:
     import pygame.typing
