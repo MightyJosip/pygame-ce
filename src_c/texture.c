@@ -86,9 +86,7 @@ texture_set_color(pgTextureObject *self, PyObject *arg, void *closure) {
 static PyObject *
 texture_get_rect(pgTextureObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwargs) {
     PyObject *rect = pgRect_New4(0, 0, self->width, self->height);
-    // TODO MightyJosip, modify this after #3303 is merged
-    // return pgObject_getRectHelper(rect, args, nargs, kwargs);
-    return rect;
+    return pgObject_getRectHelper(rect, args, nargs, kwargs, "rect");
 }
 
 static PyObject *
