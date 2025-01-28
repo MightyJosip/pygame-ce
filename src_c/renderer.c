@@ -14,9 +14,34 @@ static PyTypeObject pgRenderer_Type;
     }
 
 // TODO MightyJosip Does from_window even work?
-/*static PyObject *
-from_window(PyObject *self, PyObject *arg, PyObject *kwargs) {
-}*/
+static PyObject *
+from_window(PyTypeObject *cls, PyObject *args, PyObject *kwargs) 
+{
+    PyObject *window;
+    static char *keywords[] = {"window", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", keywords, &window)) {
+        return NULL;
+    }
+    if (pgWindow_Check(window)) {
+        pgRendererObject *self = (pgRendererObject *)(cls->tp_new(cls, NULL, NULL));
+        self->window = (pgWindowObject *) window;
+        if (self->window->_is_borrowed) {
+            self->_is_borrowed = SDL_TRUE;
+        }
+        else {
+            return RAISE(pgExc_SDLError, "Window is not created from display module");
+        }
+        self->renderer = SDL_GetRenderer(self->window->_win);
+        if (!self->renderer) {
+            return RAISE(pgExc_SDLError, SDL_GetError());
+        }
+        self->target = Py_None;
+        return (PyObject *)self;
+    }
+    else {
+        return RAISE(PyExc_TypeError, "Invalid window argument");
+    }
+}
 
 static PyObject *
 compose_custom_blend_mode(PyObject *self, PyObject *args, PyObject *kwargs)
@@ -498,6 +523,8 @@ static PyMethodDef renderer_methods[] = {
      DOC_SDL2_VIDEO_RENDERER_GETVIEWPORT},
     {"compose_custom_blend_mode", (PyCFunction)compose_custom_blend_mode, METH_VARARGS | METH_KEYWORDS | METH_CLASS,
      DOC_SDL2_VIDEO_RENDERER_COMPOSECUSTOMBLENDMODE},
+    {"from_window", (PyCFunction)from_window, METH_CLASS | METH_VARARGS | METH_KEYWORDS,
+     DOC_SDL2_VIDEO_GETGRABBEDWINDOW},
     //{"to_surface", (PyCFunction)renderer_to_surface, METH_VARARGS | METH_KEYWORDS,
     // DOC_SDL2_VIDEO_RENDERER_TOSURFACE},
     //{"blit", (PyCFunction)renderer_blit, METH_VARARGS | METH_KEYWORDS,
@@ -531,12 +558,6 @@ static PyTypeObject pgRenderer_Type = {
     .tp_getset = renderer_getset
 };
 
-static PyMethodDef _renderer_methods[] = {
-    //{"from_window", (PyCFunction)from_window, METH_VARARGS | METH_KEYWORDS,
-    // DOC_SDL2_VIDEO_GETGRABBEDWINDOW},
-    {NULL, NULL, 0, NULL}
-};
-
 MODINIT_DEFINE(_renderer)
 {
     PyObject *module, *apiobj;
@@ -546,7 +567,7 @@ MODINIT_DEFINE(_renderer)
                                          "_renderer",
                                          "docs_needed",
                                          -1,
-                                         _renderer_methods,
+                                         NULL,
                                          NULL,
                                          NULL,
                                          NULL,
@@ -571,6 +592,11 @@ MODINIT_DEFINE(_renderer)
     }
 
     import_pygame_color();
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+
+    import_pygame_window();
     if (PyErr_Occurred()) {
         return NULL;
     }

@@ -526,6 +526,8 @@ typedef struct {
 typedef struct {
     PyObject_HEAD SDL_Renderer *renderer;
     pgWindowObject *window;
+    PyObject *target;
+    SDL_bool _is_borrowed;
 } pgRendererObject;
 #ifndef PYGAMEAPI_RENDERER_INTERNAL
 #define pgRenderer_Type (*(PyTypeObject *)PYGAMEAPI_GET_SLOT(_renderer, 0))
