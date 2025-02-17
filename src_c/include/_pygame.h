@@ -520,6 +520,20 @@ typedef struct {
 #define import_pygame_window() IMPORT_PYGAME_MODULE(window)
 #endif
 
+/*
+ * GPU module
+ */
+typedef struct {
+    PyObject_HEAD SDL_GPUDevice *device;
+} pgGPUDeviceObject;
+
+#ifndef PYGAMEAPI_GPU_INTERNAL
+#define pgGPUDevice_Type (*(PyTypeObject *)PYGAMEAPI_GET_SLOT(_gpu, 0))
+#define pgGPUDevice_Check(x) \
+    (PyObject_IsInstance((x), (PyObject *)&pgGPUDevice_Type))
+#define import_pygame_gpu() IMPORT_PYGAME_MODULE(_gpu)
+#endif
+
 #define IMPORT_PYGAME_MODULE _IMPORT_PYGAME_MODULE
 
 /*
@@ -540,6 +554,7 @@ PYGAMEAPI_DEFINE_SLOTS(color);
 PYGAMEAPI_DEFINE_SLOTS(math);
 PYGAMEAPI_DEFINE_SLOTS(window);
 PYGAMEAPI_DEFINE_SLOTS(geometry);
+PYGAMEAPI_DEFINE_SLOTS(_gpu);
 #else /* ~PYGAME_H */
 PYGAMEAPI_EXTERN_SLOTS(base);
 PYGAMEAPI_EXTERN_SLOTS(rect);
@@ -554,6 +569,7 @@ PYGAMEAPI_EXTERN_SLOTS(color);
 PYGAMEAPI_EXTERN_SLOTS(math);
 PYGAMEAPI_EXTERN_SLOTS(window);
 PYGAMEAPI_EXTERN_SLOTS(geometry);
+PYGAMEAPI_EXTERN_SLOTS(_gpu);
 
 #endif /* ~PYGAME_H */
 
