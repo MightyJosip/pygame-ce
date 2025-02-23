@@ -132,11 +132,11 @@ static PyObject *
 window_destroy(pgWindowObject *self, PyObject *_null)
 {
     if (self->_win) {
-        if (self->_is_borrowed && pg_GetDefaultWindow() == self->_win) {
+        /*if (self->_is_borrowed && pg_GetDefaultWindow() == self->_win) {
             pgSurface_AsSurface(pg_GetDefaultWindowSurface()) = NULL;
             pg_SetDefaultWindowSurface(NULL);
             pg_SetDefaultWindow(NULL);
-        }
+        }*/
 
         if (self->context != NULL) {
             SDL_GL_DeleteContext(self->context);
@@ -157,7 +157,7 @@ window_destroy(pgWindowObject *self, PyObject *_null)
     Py_RETURN_NONE;
 }
 
-static PyObject *
+/*static PyObject *
 window_get_surface(pgWindowObject *self, PyObject *_null)
 {
     PyObject *surf = NULL;
@@ -191,7 +191,7 @@ window_get_surface(pgWindowObject *self, PyObject *_null)
 
     Py_INCREF(self->surf);
     return (PyObject *)self->surf;
-}
+}*/
 
 static PyObject *
 window_flip(pgWindowObject *self, PyObject *_null)
@@ -465,7 +465,7 @@ window_set_modal_for(pgWindowObject *self, PyObject *arg)
     Py_RETURN_NONE;
 }
 
-static PyObject *
+/*static PyObject *
 window_set_icon(pgWindowObject *self, PyObject *arg)
 {
     if (!pgSurface_Check(arg)) {
@@ -474,7 +474,7 @@ window_set_icon(pgWindowObject *self, PyObject *arg)
     }
     SDL_SetWindowIcon(self->_win, pgSurface_AsSurface(arg));
     Py_RETURN_NONE;
-}
+}*/
 
 static int
 window_set_grab_mouse(pgWindowObject *self, PyObject *arg, void *v)
@@ -985,8 +985,8 @@ window_init(pgWindowObject *self, PyObject *args, PyObject *kwargs)
 
     // ensure display is init at this point, display init automatically calls
     // the window init in this module
-    if (!pg_mod_autoinit(IMPPREFIX "display"))
-        return -1;
+    //if (!pg_mod_autoinit(IMPPREFIX "display"))
+    //    return -1;
 
     _kw = PyDict_New();
     if (!_kw)
@@ -1215,11 +1215,11 @@ window_init(pgWindowObject *self, PyObject *args, PyObject *kwargs)
 
     pg_set_pg_window(_win, (PyObject *)self);
 
-    PyObject *icon = pg_display_resource(icon_defaultname);
-    if (!icon) {
-        return -1;
-    }
-    if (icon_colorkey != -1) {
+    //PyObject *icon = pg_display_resource(icon_defaultname);
+    //if (!icon) {
+    //    return -1;
+    //}
+    /*if (icon_colorkey != -1) {
 #if SDL_VERSION_ATLEAST(3, 0, 0)
         if (!SDL_SetColorKey(pgSurface_AsSurface(icon), SDL_TRUE,
                              icon_colorkey)) {
@@ -1231,7 +1231,7 @@ window_init(pgWindowObject *self, PyObject *args, PyObject *kwargs)
             return -1;
         }
     }
-    SDL_SetWindowIcon(self->_win, pgSurface_AsSurface(icon));
+    SDL_SetWindowIcon(self->_win, pgSurface_AsSurface(icon));*/
 
     return 0;
 }
@@ -1360,10 +1360,10 @@ static PyMethodDef window_methods[] = {
      DOC_WINDOW_MINIMIZE},
     {"set_modal_for", (PyCFunction)window_set_modal_for, METH_O,
      DOC_WINDOW_SETMODALFOR},
-    {"set_icon", (PyCFunction)window_set_icon, METH_O, DOC_WINDOW_SETICON},
+    //{"set_icon", (PyCFunction)window_set_icon, METH_O, DOC_WINDOW_SETICON},
     {"flip", (PyCFunction)window_flip, METH_NOARGS, DOC_WINDOW_FLIP},
-    {"get_surface", (PyCFunction)window_get_surface, METH_NOARGS,
-     DOC_WINDOW_GETSURFACE},
+    //{"get_surface", (PyCFunction)window_get_surface, METH_NOARGS,
+    // DOC_WINDOW_GETSURFACE},
     {"from_display_module", (PyCFunction)window_from_display_module,
      METH_CLASS | METH_NOARGS, DOC_WINDOW_FROMDISPLAYMODULE},
     {"flash", (PyCFunction)window_flash, METH_O, DOC_WINDOW_FLASH},
@@ -1449,10 +1449,10 @@ MODINIT_DEFINE(window)
         return NULL;
     }
 
-    import_pygame_surface();
+    /*import_pygame_surface();
     if (PyErr_Occurred()) {
         return NULL;
-    }
+    }*/
 
     import_pygame_rect();
     if (PyErr_Occurred()) {

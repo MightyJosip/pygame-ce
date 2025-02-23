@@ -525,12 +525,29 @@ typedef struct {
  */
 typedef struct {
     PyObject_HEAD SDL_GPUDevice *device;
+    pgWindowObject *window;
 } pgGPUDeviceObject;
+
+typedef struct {
+    PyObject_HEAD SDL_GPUShader *shader;
+    pgGPUDeviceObject *device;
+} pgShaderObject;
+
+typedef struct {
+    PyObject_HEAD SDL_GPUGraphicsPipeline *pipeline;
+    pgGPUDeviceObject *device;
+} pgPipelineObject;
 
 #ifndef PYGAMEAPI_GPU_INTERNAL
 #define pgGPUDevice_Type (*(PyTypeObject *)PYGAMEAPI_GET_SLOT(_gpu, 0))
+#define pgShader_Type (*(PyTypeObject *)PYGAMEAPI_GET_SLOT(_gpu, 1))
+#define pgPipeline_Type (*(PyTypeObject *)PYGAMEAPI_GET_SLOT(_gpu, 2))
 #define pgGPUDevice_Check(x) \
     (PyObject_IsInstance((x), (PyObject *)&pgGPUDevice_Type))
+#define pgShader_Check(x) \
+    (PyObject_IsInstance((x), (PyObject *)&pgShader_Type))
+#define pgPipeline_Check(x) \
+    (PyObject_IsInstance((x), (PyObject *)&pgPipeline_Type))
 #define import_pygame_gpu() IMPORT_PYGAME_MODULE(_gpu)
 #endif
 
