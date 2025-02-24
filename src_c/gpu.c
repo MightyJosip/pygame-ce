@@ -168,40 +168,32 @@ draw(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     pgGPUDeviceObject *gpu_device;
     pgPipelineObject *pipeline;
-    printf("HERE 1\n");
     char *keywords[] = {"device", "pipeline", NULL};
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!O!", keywords,
                                      &pgGPUDevice_Type, &gpu_device, &pgPipeline_Type, &pipeline)) {
         return NULL;
     }
-    printf("HERE 2\n");
     SDL_GPUCommandBuffer* cmdbuf = SDL_AcquireGPUCommandBuffer(gpu_device->device);
     if (cmdbuf == NULL) {
         return RAISE(pgExc_SDLError, "AcquireGPUCommandBuffer failed");
     }
     SDL_GPUTexture* swapchainTexture;
-    printf("HERE 3\n");
     if (!SDL_WaitAndAcquireGPUSwapchainTexture(cmdbuf, gpu_device->window->_win, &swapchainTexture, NULL, NULL)) {
         return RAISE(pgExc_SDLError, "SDL_WaitAndAcquireGPUSwapchainTexture failed");
     }
-    printf("HERE 4\n");
     if (swapchainTexture != NULL) {
-        printf("HERE 5\n");
         SDL_GPUColorTargetInfo colorTargetInfo = { 0 };
         colorTargetInfo.texture = swapchainTexture;
         colorTargetInfo.clear_color = (SDL_FColor){ 0.0f, 0.0f, 0.0f, 1.0f };
         colorTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
         colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
 
-        printf("HERE 6\n");
         SDL_GPURenderPass* renderPass = SDL_BeginGPURenderPass(cmdbuf, &colorTargetInfo, 1, NULL);
         SDL_BindGPUGraphicsPipeline(renderPass, pipeline->pipeline);
         SDL_DrawGPUPrimitives(renderPass, 3, 1, 0, 0);
         SDL_EndGPURenderPass(renderPass);
     }
-    printf("HERE 7\n");
     SDL_SubmitGPUCommandBuffer(cmdbuf);
-    printf("HERE 8\n");
     Py_RETURN_NONE;
 }
 
