@@ -4,7 +4,6 @@ test_files = files(
     '__main__.py',
     'base_test.py',
     'blit_test.py',
-    'bufferproxy_test.py',
     'camera_test.py',
     'color_test.py',
     'constants_test.py',

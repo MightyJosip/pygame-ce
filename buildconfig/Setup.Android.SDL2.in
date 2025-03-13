@@ -56,7 +56,7 @@ draw src/draw/draw.c $(SDL) $(DEBUG)
 image src/image.c $(SDL) $(DEBUG)
 transform src/simd_transform_sse2.c src/simd_transform_avx2.c src/transform.c src/rotozoom.c src/scale2x.c src/scale_mmx.c $(SDL) $(DEBUG) -D_NO_MMX_FOR_X86_64
 mask src/mask.c src/bitmask.c $(SDL) $(DEBUG)
-bufferproxy src/bufferproxy.c $(SDL) $(DEBUG)
+bufferproxy src/bufferproxy/bufferproxy.c $(SDL) $(DEBUG)
 pixelarray src/pixelarray.c $(SDL) $(DEBUG)
 math src/math.c $(SDL) $(DEBUG)
 pixelcopy src/pixelcopy.c $(SDL) $(DEBUG)

@@ -33,7 +33,7 @@ typedef int (*_pgbufproxy_trip_t)(PyObject *);
 
 #ifndef PYGAMEAPI_BUFPROXY_INTERNAL
 
-#include "pgimport.h"
+#include "../include/pgimport.h"
 
 PYGAMEAPI_DEFINE_SLOTS(bufferproxy);
 

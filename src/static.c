@@ -357,7 +357,7 @@ PyInit_pygame_static()
 
 #undef pgBufproxy_New
 
-#include "bufferproxy.c"
+#include "bufferproxy/bufferproxy.c"
 
 #undef pgSurface_Blit
 #undef pgSurface_New
@@ -376,7 +376,7 @@ PyInit_pygame_static()
 
 #include "display.c"
 
-#include "draw.c"
+#include "draw/draw.c"
 
 #undef pg_EncodeString
 #undef pg_EncodeFilePath
