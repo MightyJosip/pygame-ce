@@ -130,6 +130,8 @@ PG_GetSurfaceFormat(SDL_Surface *surf)
     return SDL_GetPixelFormatDetails(surf->format);
 }
 
+#define PG_GetSurfacePalette SDL_GetSurfacePalette
+
 #define PG_GetRGBA SDL_GetRGBA
 #define PG_GetRGB SDL_GetRGB
 #define PG_MapRGBA SDL_MapRGBA
@@ -223,6 +225,12 @@ static inline PG_PixelFormat *
 PG_GetSurfaceFormat(SDL_Surface *surf)
 {
     return surf->format;
+}
+
+static inline SDL_Palette *
+PG_GetSurfacePalette(SDL_Surface *surf)
+{
+    return surf->format->palette;
 }
 
 // NOTE:
@@ -616,6 +624,7 @@ typedef enum {
 #define PYGAMEAPI_BASE_NUMSLOTS 30
 #define PYGAMEAPI_EVENT_NUMSLOTS 10
 #define PYGAMEAPI_WINDOW_NUMSLOTS 1
+#define PYGAMEAPI_RENDER_NUMSLOTS 3
 #define PYGAMEAPI_GEOMETRY_NUMSLOTS 2
 #define PYGAMEAPI_GPU_NUMSLOTS 3
 
