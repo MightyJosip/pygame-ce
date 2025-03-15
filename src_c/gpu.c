@@ -18,9 +18,9 @@ static PyTypeObject pgPipeline_Type;
 
 #define DEC_CONSTS_(x, y)                           \
     if (PyModule_AddIntConstant(module, x, (int)y)) \
-    {                                                     \
-        Py_DECREF(module);                                \
-        return NULL;                                      \
+    {                                               \
+        Py_DECREF(module);                          \
+        return NULL;                                \
     }
 #define DEC_CONST(x) DEC_CONSTS_(#x, SDL_##x)
 
@@ -99,29 +99,30 @@ static int
 pipeline_init(pgPipelineObject *self, PyObject *args, PyObject *kwargs)
 {
     SDL_GPUGraphicsPipeline *pipeline;
-    int primitive_type;
+    int primitive_type, fill_mode;
     pgShaderObject *vertex_shader, *fragment_shader;
-    char *keywords[] = {"vertex_shader", "fragment_shader", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "iO!O!", keywords, 
+    pgWindowObject *window;
+    char *keywords[] = {"window", "primitive_type", "vertex_shader", "fragment_shader", "fill_mode", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!iO!O!|i", keywords, &pgWindow_Type, &window,
                                      &primitive_type, &pgShader_Type, &vertex_shader,
-                                     &pgShader_Type, &fragment_shader)) {
+                                     &pgShader_Type, &fragment_shader, &fill_mode)) {
         return -1;
     }
     if (device == NULL) {
         RAISERETURN(pgExc_SDLError, "gpu module hasn't been initialized!", -1)
     }
 	SDL_GPUGraphicsPipelineCreateInfo pipelineCreateInfo = {
-		/*.target_info = {
+		.target_info = {
 			.num_color_targets = 1,
 			.color_target_descriptions = (SDL_GPUColorTargetDescription[]){{
 				.format = SDL_GetGPUSwapchainTextureFormat(device, window->_win)
 			}},
-		},*/
+		},
 		.primitive_type = primitive_type,
 		.vertex_shader = vertex_shader->shader,
 		.fragment_shader = fragment_shader->shader,
 	};
-    pipelineCreateInfo.rasterizer_state.fill_mode = SDL_GPU_FILLMODE_FILL;
+    pipelineCreateInfo.rasterizer_state.fill_mode = fill_mode;
     pipeline = SDL_CreateGPUGraphicsPipeline(device, &pipelineCreateInfo);
     if (pipeline == NULL) {
         PyErr_SetString(pgExc_SDLError, "Failed to create pipeline!");
@@ -171,6 +172,28 @@ claim_window(PyObject *self, PyObject *args, PyObject *kwargs)
 static PyObject *
 draw(PyObject *self, PyObject *args, PyObject *kwargs)
 {
+    SDL_GPUCommandBuffer* command_buffer;
+    SDL_GPUTexture* swapchain_texture;
+    pgWindowObject *window;
+    pgPipelineObject *pipeline;
+    char *keywords[] = {"window", "pipeline", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!O!", keywords,
+                                     &pgWindow_Type, &window, &pgPipeline_Type, &pipeline)) {
+        return NULL;
+    }
+    command_buffer = SDL_AcquireGPUCommandBuffer(device);
+    if (SDL_WaitAndAcquireGPUSwapchainTexture(command_buffer, window->_win, &swapchain_texture, NULL, NULL)) {
+        SDL_GPUColorTargetInfo colorTargetInfo = { 0 };
+        colorTargetInfo.texture = swapchain_texture;
+        colorTargetInfo.clear_color = (SDL_FColor){ 0.0f, 0.0f, 0.0f, 1.0f };
+        colorTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
+        colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
+        SDL_GPURenderPass* render_pass = SDL_BeginGPURenderPass(command_buffer, &colorTargetInfo, 1, NULL);
+        SDL_BindGPUGraphicsPipeline(render_pass, pipeline->pipeline);
+        SDL_DrawGPUPrimitives(render_pass, 3, 1, 0, 0);
+        SDL_EndGPURenderPass(render_pass);
+    }
+    SDL_SubmitGPUCommandBuffer(command_buffer);
     Py_RETURN_NONE;
 }
 
@@ -284,6 +307,8 @@ MODINIT_DEFINE(_gpu)
     DEC_CONST(GPU_PRIMITIVETYPE_TRIANGLELIST);
     DEC_CONST(GPU_SHADERSTAGE_VERTEX);
     DEC_CONST(GPU_SHADERSTAGE_FRAGMENT);
+    DEC_CONST(GPU_FILLMODE_FILL);
+    DEC_CONST(GPU_FILLMODE_LINE);
 
     c_api[0] = &pgShader_Type;
     c_api[1] = &pgPipeline_Type;
