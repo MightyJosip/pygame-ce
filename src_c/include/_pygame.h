@@ -572,15 +572,30 @@ typedef struct {
     PyObject_HEAD SDL_GPUShader *shader;
 } pgShaderObject;
 
+typedef enum VertexBufferType {
+    POSITION_VERTEX,
+    POSITION_COLOR_VERTEX,
+    POSITION_TEXTURE_VERTEX
+} VertexBufferType;
+
+typedef struct {
+    PyObject_HEAD SDL_GPUBuffer *buffer;
+    VertexBufferType type;
+    int no_of_elements;
+} pgBufferObject;
+
 typedef struct {
     PyObject_HEAD SDL_GPUGraphicsPipeline *pipeline;
 } pgPipelineObject;
 
 #ifndef PYGAMEAPI_GPU_INTERNAL
 #define pgShader_Type (*(PyTypeObject *)PYGAMEAPI_GET_SLOT(_gpu, 0))
-#define pgPipeline_Type (*(PyTypeObject *)PYGAMEAPI_GET_SLOT(_gpu, 1))
+#define pgBuffer_Type (*(PyTypeObject *)PYGAMEAPI_GET_SLOT(_gpu, 1))
+#define pgPipeline_Type (*(PyTypeObject *)PYGAMEAPI_GET_SLOT(_gpu, 2))
 #define pgShader_Check(x) \
     (PyObject_IsInstance((x), (PyObject *)&pgShader_Type))
+#define pgBuffer_Check(x) \
+    (PyObject_IsInstance((x), (PyObject *)&pgBuffer_Type))
 #define pgPipeline_Check(x) \
     (PyObject_IsInstance((x), (PyObject *)&pgPipeline_Type))
 #define import_pygame_gpu() IMPORT_PYGAME_MODULE(_gpu)
