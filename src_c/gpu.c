@@ -102,7 +102,6 @@ shader_dealloc(pgShaderObject *self, PyObject *_null)
 
 /* Buffer implementation */
 
-
 static int
 buffer_get_element_size(VertexBufferType buffer_type) {
     switch (buffer_type) {
@@ -137,14 +136,14 @@ buffer_upload(pgBufferObject *self, PyObject *args, PyObject *kwargs) {
     });
     PositionColorVertex* transfer_data = SDL_MapGPUTransferBuffer(device, transfer_buffer, false);
     for (int i = 0; i < self->no_of_elements; i++) {
-        PyObject* inner_data_obj = PyList_GetItem(data, i);
-        transfer_data[i].x = (float)PyFloat_AsDouble(PyList_GetItem(inner_data_obj, 0));
-        transfer_data[i].y = (float)PyFloat_AsDouble(PyList_GetItem(inner_data_obj, 1));
-        transfer_data[i].z = (float)PyFloat_AsDouble(PyList_GetItem(inner_data_obj, 2));
-        transfer_data[i].r = (Uint8)PyLong_AsInt(PyList_GetItem(inner_data_obj, 3));
-        transfer_data[i].g = (Uint8)PyLong_AsInt(PyList_GetItem(inner_data_obj, 4));
-        transfer_data[i].b = (Uint8)PyLong_AsInt(PyList_GetItem(inner_data_obj, 5));
-        transfer_data[i].a = (Uint8)PyLong_AsInt(PyList_GetItem(inner_data_obj, 6));
+        PyObject* inner_data_obj = PySequence_GetItem(data, i);
+        transfer_data[i].x = (float)PyFloat_AsDouble(PySequence_GetItem(inner_data_obj, 0));
+        transfer_data[i].y = (float)PyFloat_AsDouble(PySequence_GetItem(inner_data_obj, 1));
+        transfer_data[i].z = (float)PyFloat_AsDouble(PySequence_GetItem(inner_data_obj, 2));
+        transfer_data[i].r = (Uint8)PyLong_AsInt(PySequence_GetItem(inner_data_obj, 3));
+        transfer_data[i].g = (Uint8)PyLong_AsInt(PySequence_GetItem(inner_data_obj, 4));
+        transfer_data[i].b = (Uint8)PyLong_AsInt(PySequence_GetItem(inner_data_obj, 5));
+        transfer_data[i].a = (Uint8)PyLong_AsInt(PySequence_GetItem(inner_data_obj, 6));
     }
     SDL_UnmapGPUTransferBuffer(device, transfer_buffer);
     SDL_GPUCommandBuffer* uploadCmdBuf = SDL_AcquireGPUCommandBuffer(device);
