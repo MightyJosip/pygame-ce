@@ -201,29 +201,52 @@ buffer_dealloc(pgBufferObject *self, PyObject *_null) {
 }
 
 /* Pipeline implementation */
+static inline SDL_GPUTextureFormat
+get_depth_stencil_format() {
+    if (SDL_GPUTextureSupportsFormat(device, SDL_GPU_TEXTUREFORMAT_D24_UNORM_S8_UINT, SDL_GPU_TEXTURETYPE_2D, SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET)) {
+        return SDL_GPU_TEXTUREFORMAT_D24_UNORM_S8_UINT;
+    }
+    else if (SDL_GPUTextureSupportsFormat(device, SDL_GPU_TEXTUREFORMAT_D32_FLOAT_S8_UINT, SDL_GPU_TEXTURETYPE_2D, SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET)) {
+        return SDL_GPU_TEXTUREFORMAT_D32_FLOAT_S8_UINT;
+    }
+    else {
+        RAISERETURN(pgExc_SDLError, "Stencil format not supported", SDL_GPU_TEXTUREFORMAT_INVALID)
+    }
+}
+
+static inline void
+pipeline_set_target_info(SDL_GPUGraphicsPipelineTargetInfo *data, pgWindowObject *window, int has_stencil) {
+    data->num_color_targets = 1;
+    data->color_target_descriptions = &(SDL_GPUColorTargetDescription){
+        .format = SDL_GetGPUSwapchainTextureFormat(device, window->_win)
+    };
+    if (has_stencil) {
+        data->has_depth_stencil_target = true;
+        data->depth_stencil_format = get_depth_stencil_format();
+    }
+}
+
 static int
 pipeline_init(pgPipelineObject *self, PyObject *args, PyObject *kwargs)
 {
     SDL_GPUGraphicsPipeline *pipeline;
-    int primitive_type, fill_mode, num_vertex_buffer, buffer_type;
+    int primitive_type, fill_mode, num_vertex_buffer, buffer_type, cull_mode = 0, front_face = 0;
+    bool has_stencil = false;
     pgShaderObject *vertex_shader, *fragment_shader;
     pgWindowObject *window;
-    char *keywords[] = {"window", "primitive_type", "vertex_shader", "fragment_shader", "fill_mode", "num_vertex_buffers", "buffer_type", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!iO!O!|iii", keywords, &pgWindow_Type, &window,
-                                     &primitive_type, &pgShader_Type, &vertex_shader,
-                                     &pgShader_Type, &fragment_shader, &fill_mode, &num_vertex_buffer, &buffer_type)) {
+    SDL_GPUGraphicsPipelineTargetInfo target_info;
+    char *keywords[] = {"window", "primitive_type", "vertex_shader", "fragment_shader", "fill_mode", "num_vertex_buffers", "buffer_type", "cull_mode", "front_face", "has_stencil", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!iO!O!|iiiiip", keywords, &pgWindow_Type, &window,
+                                     &primitive_type, &pgShader_Type, &vertex_shader, &pgShader_Type, &fragment_shader,
+                                     &fill_mode, &num_vertex_buffer, &buffer_type, &cull_mode, &front_face, &has_stencil)) {
         return -1;
     }
     if (device == NULL) {
         RAISERETURN(pgExc_SDLError, "gpu module hasn't been initialized!", -1)
     }
+    pipeline_set_target_info(&target_info, window, has_stencil);
     SDL_GPUGraphicsPipelineCreateInfo pipelineCreateInfo = {
-        .target_info = {
-            .num_color_targets = 1,
-            .color_target_descriptions = &(SDL_GPUColorTargetDescription){
-                .format = SDL_GetGPUSwapchainTextureFormat(device, window->_win)
-            },
-        },
+        .target_info = target_info,
         .vertex_input_state = (SDL_GPUVertexInputState){
             .num_vertex_buffers = num_vertex_buffer,
             .vertex_buffer_descriptions = &(SDL_GPUVertexBufferDescription){
@@ -249,7 +272,9 @@ pipeline_init(pgPipelineObject *self, PyObject *args, PyObject *kwargs)
         .vertex_shader = vertex_shader->shader,
         .fragment_shader = fragment_shader->shader,
         .rasterizer_state = {
-            .fill_mode = fill_mode
+            .fill_mode = fill_mode,
+            .cull_mode = cull_mode,
+            .front_face = front_face
         }
     };
     pipeline = SDL_CreateGPUGraphicsPipeline(device, &pipelineCreateInfo);
@@ -302,6 +327,7 @@ claim_window(PyObject *self, PyObject *args, PyObject *kwargs)
 static PyObject *
 draw(PyObject *self, PyObject *args, PyObject *kwargs)
 {
+    // TODO: Handle multiple buffers with viewports
     SDL_GPUCommandBuffer* command_buffer;
     SDL_GPUTexture* swapchain_texture;
     pgWindowObject *window;
@@ -478,6 +504,8 @@ MODINIT_DEFINE(_gpu)
     DEC_CONST(GPU_FILLMODE_FILL);
     DEC_CONST(GPU_FILLMODE_LINE);
     DEC_CONST(GPU_BUFFERUSAGE_VERTEX);
+    DEC_CONST(GPU_FRONTFACE_CLOCKWISE);
+    DEC_CONST(GPU_FRONTFACE_COUNTER_CLOCKWISE);
     DEC_CONSTS_("POSITION_VERTEX", POSITION_VERTEX);
     DEC_CONSTS_("POSITION_COLOR_VERTEX", POSITION_COLOR_VERTEX);
     DEC_CONSTS_("POSITION_TEXTURE_VERTEX", POSITION_TEXTURE_VERTEX);
