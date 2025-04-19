@@ -17,10 +17,6 @@ jobs:
       - name: Download external file
         run: |
           curl -sS -o src_c/include/pythoncapi_compat.h https://raw.githubusercontent.com/python/pythoncapi-compat/refs/heads/main/pythoncapi_compat.h
-      
-      - name: Get current date
-        id: date
-        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
@@ -28,22 +24,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "Update pythoncapi_compat.h"
           title: "Update pythoncapi_compat.h"
-          body: "Automated update of pythoncapi_compat.h from source repository"
-          branch: "update/pythoncapi-compat-${{ steps.date.outputs.date }}"
+          body: "MightyJosip summoned automated update of pythoncapi_compat.h from source repository"
+          branch: "update/pythoncapi-compat"
           base: main
           delete-branch: true
-      #- name: Commit changes if modified
-      #  env:
-      #    GH_TOKEN: ${{ secrets.GH_TOKEN }}
-      #  run: |
-      #    git config --global user.name "GitHub Actions"
-      #    git config --global user.email "actions@github.com"
-      #    git add src_c/include/pythoncapi_compat.h
-
-          #if ! git diff --quiet --exit-code --staged; then
-          #  git commit -m "chore: Update pythoncapi_compat.h"
-          #  git remote set-url origin "https://x-access-token:$GH_TOKEN@github.com/${{ github.repository }}.git"
-          #  git push origin HEAD:${{ github.ref }}
-          #else
-          #  echo "No changes detected in external file"
-          #fi
