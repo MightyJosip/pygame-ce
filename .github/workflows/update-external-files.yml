@@ -18,6 +18,10 @@ jobs:
         run: |
           curl -sS -o src_c/include/pythoncapi_compat.h https://raw.githubusercontent.com/python/pythoncapi-compat/refs/heads/main/pythoncapi_compat.h
       
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
         with:
@@ -25,7 +29,7 @@ jobs:
           commit-message: "Update pythoncapi_compat.h"
           title: "Update pythoncapi_compat.h"
           body: "Automated update of pythoncapi_compat.h from source repository"
-          branch: "update/pythoncapi-compat-$(date +%Y-%m-%d)"
+          branch: "update/pythoncapi-compat-${{ steps.date.outputs.date }}"
           base: main
           delete-branch: true
       #- name: Commit changes if modified
