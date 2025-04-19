@@ -28,7 +28,8 @@ jobs:
 
           if ! git diff --quiet --exit-code --staged; then
             git commit -m "chore: Update pythoncapi_compat.h"
-            git push "https://$GH_TOKEN@github.com/${{ github.repository }}.git" HEAD:${{ github.ref }}
+            git remote set-url origin "https://x-access-token:$GH_TOKEN@github.com/${{ github.repository }}.git"
+            git push origin HEAD:${{ github.ref }}
           else
             echo "No changes detected in external file"
           fi
