@@ -1,0 +1,33 @@
+name: Update External Files
+
+on:
+  schedule:
+    - cron: '0 0 1 * *'
+  workflow_dispatch:
+
+jobs:
+  update-external-files:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Download external file
+        run: |
+          curl -sS -o src_c/include/pythoncapi_compat.h \
+          https://raw.githubusercontent.com/python/pythoncapi_compat/master/pythoncapi_compat.h
+      
+      - name: Commit changes if modified
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add src_c/include/pythoncapi_compat.h
+
+          if ! git diff --quiet --exit-code --staged; then
+            git commit -m "chore: Update pythoncapi_compat.h"
+            git push
+          else
+            echo "No changes detected in external file"
+          fi
