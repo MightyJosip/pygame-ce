@@ -18,18 +18,28 @@ jobs:
         run: |
           curl -sS -o src_c/include/pythoncapi_compat.h https://raw.githubusercontent.com/python/pythoncapi-compat/refs/heads/main/pythoncapi_compat.h
       
-      - name: Commit changes if modified
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-          git add src_c/include/pythoncapi_compat.h
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Update pythoncapi_compat.h"
+          title: "Update pythoncapi_compat.h"
+          body: "Automated update of pythoncapi_compat.h from source repository"
+          branch: "update/pythoncapi-compat-$(date +%Y-%m-%d)"
+          base: main
+          delete-branch: true
+      #- name: Commit changes if modified
+      #  env:
+      #    GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      #  run: |
+      #    git config --global user.name "GitHub Actions"
+      #    git config --global user.email "actions@github.com"
+      #    git add src_c/include/pythoncapi_compat.h
 
-          if ! git diff --quiet --exit-code --staged; then
-            git commit -m "chore: Update pythoncapi_compat.h"
-            git remote set-url origin "https://x-access-token:$GH_TOKEN@github.com/${{ github.repository }}.git"
-            git push origin HEAD:${{ github.ref }}
-          else
-            echo "No changes detected in external file"
-          fi
+          #if ! git diff --quiet --exit-code --staged; then
+          #  git commit -m "chore: Update pythoncapi_compat.h"
+          #  git remote set-url origin "https://x-access-token:$GH_TOKEN@github.com/${{ github.repository }}.git"
+          #  git push origin HEAD:${{ github.ref }}
+          #else
+          #  echo "No changes detected in external file"
+          #fi
