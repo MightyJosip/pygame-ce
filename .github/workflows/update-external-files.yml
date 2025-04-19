@@ -27,4 +27,6 @@ jobs:
           body: "MightyJosip summoned automated update of pythoncapi_compat.h from source repository"
           branch: "update/pythoncapi-compat"
           base: main
+          repo: pygame-community/pygame-ce
           delete-branch: true
+          maintainer_can_modify: true
