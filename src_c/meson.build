@@ -364,6 +364,15 @@ _camera = py.extension_module(
     subdir: pg,
 )
 
+_sprite = py.extension_module(
+    '_sprite',
+    'sprite.c',
+    c_args: warnings_error,
+    dependencies: pg_base_deps,
+    install: true,
+    subdir: pg,
+)
+
 # pygame.scrap
 pg_scrap_link = [] # TODO: should this link logic be improved/made meson-ey?
 if plat == 'win'

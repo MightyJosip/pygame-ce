@@ -389,6 +389,7 @@ PyInit_pygame_static()
 
 #define pgSurface_New(surface) (pgSurfaceObject *)pgSurface_New2((surface), 1)
 #include "render.c"
+#include "sprite.c"
 #include "image.c"
 
 #include "imageext.c"
