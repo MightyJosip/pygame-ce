@@ -332,7 +332,7 @@ draw(PyObject *self, PyObject *args, PyObject *kwargs)
     SDL_GPUTexture* swapchain_texture;
     pgWindowObject *window;
     pgPipelineObject *pipeline;
-    pgBufferObject *buffer;
+    pgBufferObject *buffer = NULL;
     char *keywords[] = {"window", "pipeline", "buffer", NULL};
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!O!|O!", keywords,
                                      &pgWindow_Type, &window, &pgPipeline_Type, &pipeline, &pgBuffer_Type, &buffer)) {
