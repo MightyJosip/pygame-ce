@@ -580,6 +580,10 @@ typedef struct {
  * GPU module
  */
 
+typedef struct {
+    PyObject_HEAD SDL_GPUShader *shader;
+} pgShaderObject;
+
 #ifndef PYGAMEAPI_GPU_INTERNAL
 #define import_pygame_gpu() IMPORT_PYGAME_MODULE(gpu)
 #endif
