@@ -576,6 +576,14 @@ typedef struct {
 #define import_pygame_render() IMPORT_PYGAME_MODULE(_render)
 #endif
 
+/*
+ * GPU module
+ */
+
+#ifndef PYGAMEAPI_GPU_INTERNAL
+#define import_pygame_gpu() IMPORT_PYGAME_MODULE(gpu)
+#endif
+
 #define IMPORT_PYGAME_MODULE _IMPORT_PYGAME_MODULE
 
 /*
@@ -598,6 +606,7 @@ PYGAMEAPI_DEFINE_SLOTS(math);
 PYGAMEAPI_DEFINE_SLOTS(window);
 PYGAMEAPI_DEFINE_SLOTS(_render);
 PYGAMEAPI_DEFINE_SLOTS(geometry);
+PYGAMEAPI_DEFINE_SLOTS(_gpu);
 #else /* ~PYGAME_H */
 PYGAMEAPI_EXTERN_SLOTS(base);
 PYGAMEAPI_EXTERN_SLOTS(rect);
@@ -614,6 +623,7 @@ PYGAMEAPI_EXTERN_SLOTS(math);
 PYGAMEAPI_EXTERN_SLOTS(window);
 PYGAMEAPI_EXTERN_SLOTS(_render);
 PYGAMEAPI_EXTERN_SLOTS(geometry);
+PYGAMEAPI_EXTERN_SLOTS(_gpu);
 
 #endif /* ~PYGAME_H */
 

@@ -302,6 +302,17 @@ window = py.extension_module(
     subdir: pg,
 )
 
+if sdl_api == 3
+gpu = py.extension_module(
+    'gpu',
+    'gpu.c',
+    c_args: warnings_error,
+    dependencies: pg_base_deps,
+    install: true,
+    subdir: pg
+)
+endif
+
 # TODO: support SDL3
 if sdl_api != 3
 _render = py.extension_module(
