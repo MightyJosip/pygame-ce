@@ -1245,23 +1245,18 @@ window_init(pgWindowObject *self, PyObject *args, PyObject *kwargs)
 
     pg_set_pg_window(_win, (PyObject *)self);
 
-    //PyObject *icon = pg_display_resource(icon_defaultname);
-    //if (!icon) {
-    //    return -1;
-    //}
-    /*if (icon_colorkey != -1) {
-#if SDL_VERSION_ATLEAST(3, 0, 0)
-        if (!SDL_SetColorKey(pgSurface_AsSurface(icon), SDL_TRUE,
-                             icon_colorkey)) {
-#else
-        if (SDL_SetColorKey(pgSurface_AsSurface(icon), SDL_TRUE,
-                            icon_colorkey) < 0) {
-#endif
+    PyObject *icon = pg_display_resource(icon_defaultname);
+    if (!icon) {
+        return -1;
+    }
+    if (icon_colorkey != -1) {
+        if (!PG_SetSurfaceColorKey(pgSurface_AsSurface(icon), SDL_TRUE,
+                                   icon_colorkey)) {
             PyErr_SetString(pgExc_SDLError, SDL_GetError());
             return -1;
         }
     }
-    SDL_SetWindowIcon(self->_win, pgSurface_AsSurface(icon));*/
+    SDL_SetWindowIcon(self->_win, pgSurface_AsSurface(icon));
 
     return 0;
 }
