@@ -1245,7 +1245,7 @@ window_init(pgWindowObject *self, PyObject *args, PyObject *kwargs)
 
     pg_set_pg_window(_win, (PyObject *)self);
 
-    PyObject *icon = pg_display_resource(icon_defaultname);
+    /*PyObject *icon = pg_display_resource(icon_defaultname);
     if (!icon) {
         return -1;
     }
@@ -1256,7 +1256,7 @@ window_init(pgWindowObject *self, PyObject *args, PyObject *kwargs)
             return -1;
         }
     }
-    SDL_SetWindowIcon(self->_win, pgSurface_AsSurface(icon));
+    SDL_SetWindowIcon(self->_win, pgSurface_AsSurface(icon));*/
 
     return 0;
 }
