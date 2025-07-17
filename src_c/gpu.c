@@ -6,15 +6,24 @@
 
 static SDL_GPUDevice *device;
 
+static SDL_GPUCommandBuffer *cmdbuf = NULL;
+
+static int active_render_passes = 0;
+
 static PyTypeObject pgShader_Type;
 
 static PyTypeObject pgRenderPass_Type;
+
+static PyTypeObject pgPipeline_Type;
 
 #define pgShader_Check(x) \
     (PyObject_IsInstance((x), (PyObject *)&pgShader_Type))
 
 #define pgRenderPass_Check(x) \
     (PyObject_IsInstance((x), (PyObject *)&pgRenderPass_Type))
+
+#define pgPipeline_Check(x) \
+    (PyObject_IsInstance((x), (PyObject *)&pgPipeline_Type))
 
 #define DEC_CONSTS_(x, y)                           \
     if (PyModule_AddIntConstant(module, x, (int)y)) \
@@ -23,6 +32,17 @@ static PyTypeObject pgRenderPass_Type;
         return NULL;                                \
     }
 #define DEC_CONST(x) DEC_CONSTS_(#x, SDL_##x)
+
+static void
+acquire_command_buffer()
+{
+    if (cmdbuf == NULL) {
+        cmdbuf = SDL_AcquireGPUCommandBuffer(device);
+        if (cmdbuf == NULL) {
+            RAISE(pgExc_SDLError, SDL_GetError());
+        }
+    }
+}
 
 /* Shader implementation */
 static int
@@ -94,6 +114,88 @@ shader_dealloc(pgShaderObject *self, PyObject *_null)
 }
 
 /* RenderPass implementation */
+static PyObject *
+render_pass_begin(pgRenderPassObject *self, PyObject *args, PyObject *kwargs)
+{
+    pgWindowObject *window;
+    SDL_GPUTexture* swapchainTexture;
+    char *keywords[] = {"window", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!", keywords,
+                                     &pgWindow_Type, &window)) {
+        return NULL;
+    }
+    if (active_render_passes) {
+        return RAISE(pgExc_SDLError, "You must end old render pass before starting new one");
+    }
+    acquire_command_buffer();
+    if (!SDL_WaitAndAcquireGPUSwapchainTexture(cmdbuf, window->_win, &swapchainTexture, NULL, NULL)) {
+        return RAISE(pgExc_SDLError, SDL_GetError());
+    }
+    if (swapchainTexture != NULL) {
+        self->color_info.texture = swapchainTexture;
+        if (self->render_pass == NULL) {
+            self->render_pass = SDL_BeginGPURenderPass(cmdbuf, &self->color_info, 1, NULL);
+            active_render_passes++;
+        }
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject *
+render_pass_end(pgRenderPassObject *self, PyObject *_null)
+{
+    if (self->render_pass != NULL) {
+        SDL_EndGPURenderPass(self->render_pass);
+        active_render_passes--;
+        self->render_pass = NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject *
+render_pass_draw_primitives(pgRenderPassObject *self, PyObject *args, PyObject *kwargs)
+{
+    int vertices, instances;
+    char *keywords[] = {"vertices", "instances", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ii", keywords,
+                                     &vertices, &instances)) {
+        return NULL;
+    }
+    SDL_DrawGPUPrimitives(self->render_pass, vertices, instances, 0, 0);
+    Py_RETURN_NONE;
+}
+
+static PyObject *
+render_pass_set_viewport(pgRenderPassObject *self, PyObject *args, PyObject *kwargs)
+{
+    float x, y, w, h, min_depth, max_depth;
+    char *keywords[] = {"x", "y", "w", "h", "min_depth", "max_depth", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ffffff", keywords,
+                                     &x, &y, &w, &h, &min_depth, &max_depth)) {
+        return NULL;
+    }
+    SDL_SetGPUViewport(self->render_pass, (SDL_GPUViewport[]){x, y, w, h, min_depth, max_depth});
+    Py_RETURN_NONE;
+}
+
+static PyObject *
+render_pass_set_scissor(pgRenderPassObject *self, PyObject *args, PyObject *kwargs)
+{
+    PyObject *rectobj;
+    SDL_Rect *rect = NULL, temp;
+    char *keywords[] = {"rect", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", keywords,
+                                     &rectobj)) {
+        return NULL;
+    }
+    rect = pgRect_FromObject(rectobj, &temp);
+    if (!rect) {
+        return RAISE(PyExc_TypeError, "rect argument is invalid");
+    }
+    SDL_SetGPUScissor(self->render_pass, rect);
+    Py_RETURN_NONE;
+}
+
 static int
 render_pass_init(pgRenderPassObject *self, PyObject *args, PyObject *kwargs)
 {
@@ -126,8 +228,58 @@ render_pass_init(pgRenderPassObject *self, PyObject *args, PyObject *kwargs)
 static void
 render_pass_dealloc(pgRenderPassObject *self, PyObject *_null)
 {
-    if (device != NULL && self->render_pass) {
-        SDL_EndGPURenderPass(self->render_pass);
+    Py_TYPE(self)->tp_free(self);
+}
+
+/* Pipeline implementation */
+static PyObject *
+pipeline_bind(pgPipelineObject *self, PyObject *args, PyObject *kwargs)
+{
+    pgRenderPassObject *render_pass;
+    char *keywords[] = {"render_pass", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!", keywords,
+                                     &pgRenderPass_Type, &render_pass)) {
+        return NULL;
+    }
+    SDL_BindGPUGraphicsPipeline(render_pass->render_pass, self->pipeline);
+    Py_RETURN_NONE;
+}
+
+static int
+pipeline_init(pgPipelineObject *self, PyObject *args, PyObject *kwargs)
+{
+    pgWindowObject *window;
+    pgShaderObject *vertex_shader, *fragment_shader;
+    SDL_GPUPrimitiveType primitive_type;
+    SDL_GPUFillMode fill_mode;
+    char *keywords[] = {"window", "vertex_shader", "fragment_shader", "primitive_type", "fill_mode", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!O!O!ii", keywords,
+                                     &pgWindow_Type, &window, &pgShader_Type, &vertex_shader, &pgShader_Type, &fragment_shader, &primitive_type, &fill_mode)) {
+        return -1;
+    }
+    self->pipeline_info.target_info = (SDL_GPUGraphicsPipelineTargetInfo){
+        .num_color_targets = 1,
+        .color_target_descriptions = (SDL_GPUColorTargetDescription[]){{
+            .format = SDL_GetGPUSwapchainTextureFormat(device, window->_win)
+        }},
+    };
+    self->pipeline_info.vertex_shader = vertex_shader->shader;
+    self->pipeline_info.fragment_shader = fragment_shader->shader;
+    self->pipeline_info.primitive_type = primitive_type;
+    self->pipeline_info.rasterizer_state.fill_mode = fill_mode;
+    self->pipeline = SDL_CreateGPUGraphicsPipeline(device, &self->pipeline_info);
+    if (self->pipeline == NULL) {
+        RAISERETURN(pgExc_SDLError, SDL_GetError(), -1);
+    }
+    return 0;
+}
+
+static void
+pipeline_dealloc(pgPipelineObject *self, PyObject *_null)
+{
+    if (device != NULL && self->pipeline) {
+        SDL_ReleaseGPUGraphicsPipeline(device, self->pipeline);
+        self->pipeline = NULL;
     }
     Py_TYPE(self)->tp_free(self);
 }
@@ -162,31 +314,16 @@ claim_window(PyObject *self, PyObject *args, PyObject *kwargs)
 }
 
 static PyObject *
-submit(PyObject *self, PyObject *args, PyObject *kwargs)
+submit(PyObject *self, PyObject *_null)
 {
-    pgWindowObject *window;
-    pgRenderPassObject *render_pass;
-    SDL_GPUCommandBuffer* cmdbuf;
-    SDL_GPUTexture* swapchainTexture;
-    char *keywords[] = {"window", "render_pass", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!O!", keywords,
-                                     &pgWindow_Type, &window, &pgRenderPass_Type, &render_pass)) {
-        return NULL;
+    if (cmdbuf != NULL) {
+        SDL_SubmitGPUCommandBuffer(cmdbuf);
+        cmdbuf = NULL;
+        Py_RETURN_NONE;
     }
-    cmdbuf = SDL_AcquireGPUCommandBuffer(device);
-    if (cmdbuf == NULL) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
+    else {
+        RAISERETURN(pgExc_SDLError, "command buffer is not acquired", NULL);
     }
-    if (!SDL_WaitAndAcquireGPUSwapchainTexture(cmdbuf, window->_win, &swapchainTexture, NULL, NULL)) {
-        return RAISE(pgExc_SDLError, SDL_GetError());
-    }
-    if (swapchainTexture != NULL) {
-        render_pass->color_info.texture = swapchainTexture;
-        render_pass->render_pass = SDL_BeginGPURenderPass(cmdbuf, &render_pass->color_info, 1, NULL);
-        SDL_EndGPURenderPass(render_pass->render_pass);
-    }
-    SDL_SubmitGPUCommandBuffer(cmdbuf);
-    Py_RETURN_NONE;
 }
 
 static PyObject *
@@ -203,9 +340,29 @@ static PyMethodDef shader_methods[] = {{NULL, NULL, 0, NULL}};
 
 static PyGetSetDef shader_getset[] = {{NULL, 0, NULL, NULL, NULL}};
 
-static PyMethodDef render_pass_methods[] = {{NULL, NULL, 0, NULL}};
+static PyMethodDef render_pass_methods[] = {
+    {"begin", (PyCFunction)render_pass_begin,
+     METH_VARARGS | METH_KEYWORDS, NULL},
+    {"draw_primitives", (PyCFunction)render_pass_draw_primitives,
+     METH_VARARGS | METH_KEYWORDS, NULL},
+    {"set_viewport", (PyCFunction)render_pass_set_viewport,
+     METH_VARARGS | METH_KEYWORDS, NULL},
+    {"set_scissor", (PyCFunction)render_pass_set_scissor,
+     METH_VARARGS | METH_KEYWORDS, NULL},
+    {"end", (PyCFunction)render_pass_end,
+    METH_NOARGS, NULL},
+    {NULL, NULL, 0, NULL}
+};
 
 static PyGetSetDef render_pass_getset[] = {{NULL, 0, NULL, NULL, NULL}};
+
+static PyMethodDef pipeline_methods[] = {
+    {"bind", (PyCFunction)pipeline_bind,
+     METH_VARARGS | METH_KEYWORDS, NULL},
+    {NULL, NULL, 0, NULL}
+};
+
+static PyGetSetDef pipeline_getset[] = {{NULL, 0, NULL, NULL, NULL}};
 
 static PyTypeObject pgShader_Type = {
     PyVarObject_HEAD_INIT(NULL, 0).tp_name = "pygame.gpu.Shader",
@@ -229,10 +386,21 @@ static PyTypeObject pgRenderPass_Type = {
     .tp_getset = render_pass_getset
 };
 
+static PyTypeObject pgPipeline_Type = {
+    PyVarObject_HEAD_INIT(NULL, 0).tp_name = "pygame.gpu.Pipeline",
+    .tp_basicsize = sizeof(pgPipelineObject),
+    .tp_dealloc = (destructor)pipeline_dealloc,
+    //.tp_doc = DOC_GPU_PIPELINE,
+    .tp_methods = pipeline_methods,
+    .tp_init = (initproc)pipeline_init,
+    .tp_new = PyType_GenericNew,
+    .tp_getset = pipeline_getset
+};
+
 static PyMethodDef gpu_methods[] = {
     {"init", (PyCFunction)init, METH_NOARGS, NULL},
     {"claim_window", (PyCFunction)claim_window, METH_VARARGS | METH_KEYWORDS, NULL},
-    {"submit", (PyCFunction)submit, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"submit", (PyCFunction)submit, METH_NOARGS, NULL},
     {"quit", (PyCFunction)quit, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
@@ -271,6 +439,10 @@ MODINIT_DEFINE(gpu)
     if (PyErr_Occurred()) {
         return NULL;
     }
+    import_pygame_rect();
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
 
     /* create the module */
     module = PyModule_Create(&_module);
@@ -288,6 +460,11 @@ MODINIT_DEFINE(gpu)
         return NULL;
     }
 
+    if (PyModule_AddType(module, &pgPipeline_Type)) {
+        Py_XDECREF(module);
+        return NULL;
+    }
+
     DEC_CONST(GPU_SHADERSTAGE_VERTEX);
     DEC_CONST(GPU_SHADERSTAGE_FRAGMENT);
     DEC_CONST(GPU_LOADOP_LOAD);
@@ -297,6 +474,13 @@ MODINIT_DEFINE(gpu)
     DEC_CONST(GPU_STOREOP_DONT_CARE);
     DEC_CONST(GPU_STOREOP_RESOLVE);
     DEC_CONST(GPU_STOREOP_RESOLVE_AND_STORE);
+    DEC_CONST(GPU_PRIMITIVETYPE_TRIANGLELIST);
+    DEC_CONST(GPU_PRIMITIVETYPE_TRIANGLESTRIP);
+    DEC_CONST(GPU_PRIMITIVETYPE_LINELIST);
+    DEC_CONST(GPU_PRIMITIVETYPE_LINESTRIP);
+    DEC_CONST(GPU_PRIMITIVETYPE_POINTLIST);
+    DEC_CONST(GPU_FILLMODE_FILL);
+    DEC_CONST(GPU_FILLMODE_LINE);
 
     apiobj = encapsulate_api(c_api, "gpu");
     if (PyModule_AddObject(module, PYGAMEAPI_LOCAL_ENTRY, apiobj)) {

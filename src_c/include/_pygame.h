@@ -589,6 +589,11 @@ typedef struct {
     SDL_GPUColorTargetInfo color_info;
 } pgRenderPassObject;
 
+typedef struct {
+    PyObject_HEAD SDL_GPUGraphicsPipeline *pipeline;
+    SDL_GPUGraphicsPipelineCreateInfo pipeline_info;
+} pgPipelineObject;
+
 #ifndef PYGAMEAPI_GPU_INTERNAL
 #define import_pygame_gpu() IMPORT_PYGAME_MODULE(gpu)
 #endif
