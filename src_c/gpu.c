@@ -4,17 +4,21 @@
 
 #include "pgcompat.h"
 
+/* Context */
 static SDL_GPUDevice *device;
 
 static SDL_GPUCommandBuffer *cmdbuf = NULL;
 
 static int active_render_passes = 0;
 
+/* Types */
 static PyTypeObject pgShader_Type;
 
 static PyTypeObject pgRenderPass_Type;
 
 static PyTypeObject pgPipeline_Type;
+
+static PyTypeObject pgBuffer_Type;
 
 #define pgShader_Check(x) \
     (PyObject_IsInstance((x), (PyObject *)&pgShader_Type))
@@ -24,6 +28,9 @@ static PyTypeObject pgPipeline_Type;
 
 #define pgPipeline_Check(x) \
     (PyObject_IsInstance((x), (PyObject *)&pgPipeline_Type))
+
+#define pgBuffer_Check(x) \
+    (PyObject_IsInstance((x), (PyObject *)&pgBuffer_Type))
 
 #define DEC_CONSTS_(x, y)                           \
     if (PyModule_AddIntConstant(module, x, (int)y)) \
@@ -232,6 +239,39 @@ render_pass_dealloc(pgRenderPassObject *self, PyObject *_null)
 }
 
 /* Pipeline implementation */
+static void
+pipeline_fill_vertex_input_state(pgPipelineObject *self, BufferType vertex_input_state)
+{
+    SDL_GPUVertexBufferDescription* buffer_description;
+    SDL_GPUVertexAttribute* vertex_attribute;
+    if (vertex_input_state == POSITION_COLOR_VERTEX) {
+        buffer_description = (SDL_GPUVertexBufferDescription*)malloc(sizeof(SDL_GPUVertexBufferDescription));
+        buffer_description->slot = 0;
+        buffer_description->input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+        buffer_description->instance_step_rate = 0;
+        buffer_description->pitch = sizeof(PositionColorVertex);
+
+        vertex_attribute = (SDL_GPUVertexAttribute*)malloc(2 * sizeof(SDL_GPUVertexAttribute));
+        vertex_attribute[0].buffer_slot = 0;
+        vertex_attribute[0].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
+        vertex_attribute[0].location = 0;
+        vertex_attribute[0].offset = 0;
+        vertex_attribute[1].buffer_slot = 0;
+        vertex_attribute[1].format = SDL_GPU_VERTEXELEMENTFORMAT_UBYTE4_NORM;
+        vertex_attribute[1].location = 1;
+        vertex_attribute[1].offset = sizeof(float) * 3;
+
+        self->pipeline_info.vertex_input_state = (SDL_GPUVertexInputState){
+            .num_vertex_buffers = 1,
+            .vertex_buffer_descriptions = buffer_description,
+            .num_vertex_attributes = 2,
+            .vertex_attributes = vertex_attribute
+        };
+    }
+    free(buffer_description);
+    free(vertex_attribute);
+}
+
 static PyObject *
 pipeline_bind(pgPipelineObject *self, PyObject *args, PyObject *kwargs)
 {
@@ -251,10 +291,11 @@ pipeline_init(pgPipelineObject *self, PyObject *args, PyObject *kwargs)
     pgWindowObject *window;
     pgShaderObject *vertex_shader, *fragment_shader;
     SDL_GPUPrimitiveType primitive_type;
-    SDL_GPUFillMode fill_mode;
-    char *keywords[] = {"window", "vertex_shader", "fragment_shader", "primitive_type", "fill_mode", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!O!O!ii", keywords,
-                                     &pgWindow_Type, &window, &pgShader_Type, &vertex_shader, &pgShader_Type, &fragment_shader, &primitive_type, &fill_mode)) {
+    SDL_GPUFillMode fill_mode = SDL_GPU_FILLMODE_FILL;
+    BufferType vertex_input_state = -1;
+    char *keywords[] = {"window", "vertex_shader", "fragment_shader", "primitive_type", "fill_mode", "vertex_input_state", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!O!O!i|ii", keywords,
+                                     &pgWindow_Type, &window, &pgShader_Type, &vertex_shader, &pgShader_Type, &fragment_shader, &primitive_type, &fill_mode, &vertex_input_state)) {
         return -1;
     }
     self->pipeline_info.target_info = (SDL_GPUGraphicsPipelineTargetInfo){
@@ -267,6 +308,9 @@ pipeline_init(pgPipelineObject *self, PyObject *args, PyObject *kwargs)
     self->pipeline_info.fragment_shader = fragment_shader->shader;
     self->pipeline_info.primitive_type = primitive_type;
     self->pipeline_info.rasterizer_state.fill_mode = fill_mode;
+    if (vertex_input_state > -1) {
+        pipeline_fill_vertex_input_state(self, vertex_input_state);
+    }
     self->pipeline = SDL_CreateGPUGraphicsPipeline(device, &self->pipeline_info);
     if (self->pipeline == NULL) {
         RAISERETURN(pgExc_SDLError, SDL_GetError(), -1);
@@ -280,6 +324,141 @@ pipeline_dealloc(pgPipelineObject *self, PyObject *_null)
     if (device != NULL && self->pipeline) {
         SDL_ReleaseGPUGraphicsPipeline(device, self->pipeline);
         self->pipeline = NULL;
+    }
+    Py_TYPE(self)->tp_free(self);
+}
+
+/* Buffer implementation */
+static int
+buffer_get_element_size(BufferType buffer_type) {
+    switch (buffer_type) {
+        case POSITION_VERTEX:
+            return sizeof(float) * 3;
+        case POSITION_COLOR_VERTEX:
+            return sizeof(float) * 3 + 4 * sizeof(Uint8);
+        case POSITION_TEXTURE_VERTEX:
+            return sizeof(float) * 5;
+        default:
+            return 0;
+    }
+}
+
+static inline SDL_GPUTransferBuffer*
+buffer_upload_position_color_vertex(pgBufferObject *self, PyObject* data, int size)
+{
+    SDL_GPUTransferBuffer* transfer_buffer = SDL_CreateGPUTransferBuffer(device, &(SDL_GPUTransferBufferCreateInfo) {
+        .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+        .size = size
+    });
+    PositionColorVertex* transfer_data = SDL_MapGPUTransferBuffer(device, transfer_buffer, false);
+    for (int i = 0; i < self->no_of_elements; i++) {
+        PyObject* inner_data_obj = PySequence_GetItem(data, i);
+        transfer_data[i].x = (float)PyFloat_AsDouble(PySequence_GetItem(inner_data_obj, 0));
+        transfer_data[i].y = (float)PyFloat_AsDouble(PySequence_GetItem(inner_data_obj, 1));
+        transfer_data[i].z = (float)PyFloat_AsDouble(PySequence_GetItem(inner_data_obj, 2));
+        transfer_data[i].r = (Uint8)PyLong_AsInt(PySequence_GetItem(inner_data_obj, 3));
+        transfer_data[i].g = (Uint8)PyLong_AsInt(PySequence_GetItem(inner_data_obj, 4));
+        transfer_data[i].b = (Uint8)PyLong_AsInt(PySequence_GetItem(inner_data_obj, 5));
+        transfer_data[i].a = (Uint8)PyLong_AsInt(PySequence_GetItem(inner_data_obj, 6));
+    }
+    SDL_UnmapGPUTransferBuffer(device, transfer_buffer);
+    return transfer_buffer;
+}
+
+static PyObject *
+buffer_upload(pgBufferObject *self, PyObject *args, PyObject *kwargs)
+{
+    PyObject* data;
+    int size = buffer_get_element_size(self->buffer_type) * self->no_of_elements;
+    char *keywords[] = {"data", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", keywords, &data)) {
+        return NULL;
+    }
+    SDL_GPUTransferBuffer* transfer_buffer;
+    switch (self->buffer_type) {
+        case POSITION_COLOR_VERTEX:
+            transfer_buffer = buffer_upload_position_color_vertex(self, data, size);
+            break;
+        default:
+            transfer_buffer = buffer_upload_position_color_vertex(self, data, size);
+    }
+    SDL_GPUCommandBuffer* upload_cmd_buf = SDL_AcquireGPUCommandBuffer(device);
+    SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(upload_cmd_buf);
+    SDL_UploadToGPUBuffer(
+		copy_pass,
+		&(SDL_GPUTransferBufferLocation) {
+			.transfer_buffer = transfer_buffer,
+			.offset = 0
+		},
+		&(SDL_GPUBufferRegion) {
+			.buffer = self->buffer,
+			.offset = 0,
+			.size = size
+		},
+		false
+	);
+    SDL_ReleaseGPUTransferBuffer(device, transfer_buffer);
+    SDL_EndGPUCopyPass(copy_pass);
+	SDL_SubmitGPUCommandBuffer(upload_cmd_buf);
+    Py_RETURN_NONE;
+}
+
+static PyObject *
+buffer_bind(pgBufferObject *self, PyObject *args, PyObject *kwargs)
+{
+    pgRenderPassObject *render_pass;
+    char *keywords[] = {"render_pass", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!", keywords,
+                                     &pgRenderPass_Type, &render_pass)) {
+        return NULL;
+    }
+    if (self->usage == SDL_GPU_BUFFERUSAGE_VERTEX) {
+        SDL_BindGPUVertexBuffers(render_pass->render_pass, 0,
+            &(SDL_GPUBufferBinding){
+                .buffer = self->buffer,
+                .offset = 0
+            },
+            1
+        );
+    }
+    Py_RETURN_NONE;
+}
+
+static int
+buffer_init(pgBufferObject *self, PyObject *args, PyObject *kwargs)
+{
+    SDL_GPUBuffer *buffer = NULL;
+    SDL_GPUBufferUsageFlags usage;
+    BufferType buffer_type;
+    Uint32 size;
+    int element_size;
+    char *keywords[] = {"usage", "buffer_type", "size", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "iii", keywords,
+                                     &usage, &buffer_type, &size)) {
+        return -1;
+    }
+    element_size = buffer_get_element_size(buffer_type);
+    if (!element_size) {
+        RAISERETURN(pgExc_SDLError, "Unknown buffer type!", -1)
+    }
+    buffer = SDL_CreateGPUBuffer(device, &(SDL_GPUBufferCreateInfo) {
+        .usage = usage,
+        .size = element_size * size
+    });
+    if (buffer == NULL) {
+        RAISERETURN(pgExc_SDLError, SDL_GetError(), -1);
+    }
+    self->buffer = buffer;
+    self->buffer_type = buffer_type;
+    self->no_of_elements = size;
+    self->usage = usage;
+    return 0;
+}
+
+static void
+buffer_dealloc(pgBufferObject *self, PyObject *_null) {
+    if (device != NULL && self->buffer) {
+        SDL_ReleaseGPUBuffer(device, self->buffer);
     }
     Py_TYPE(self)->tp_free(self);
 }
@@ -364,6 +543,16 @@ static PyMethodDef pipeline_methods[] = {
 
 static PyGetSetDef pipeline_getset[] = {{NULL, 0, NULL, NULL, NULL}};
 
+static PyMethodDef buffer_methods[] = {
+    {"upload", (PyCFunction)buffer_upload,
+     METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bind", (PyCFunction)buffer_bind,
+     METH_VARARGS | METH_KEYWORDS, NULL},
+    {NULL, NULL, 0, NULL}
+};
+
+static PyGetSetDef buffer_getset[] = {{NULL, 0, NULL, NULL, NULL}};
+
 static PyTypeObject pgShader_Type = {
     PyVarObject_HEAD_INIT(NULL, 0).tp_name = "pygame.gpu.Shader",
     .tp_basicsize = sizeof(pgShaderObject),
@@ -395,6 +584,17 @@ static PyTypeObject pgPipeline_Type = {
     .tp_init = (initproc)pipeline_init,
     .tp_new = PyType_GenericNew,
     .tp_getset = pipeline_getset
+};
+
+static PyTypeObject pgBuffer_Type = {
+    PyVarObject_HEAD_INIT(NULL, 0).tp_name = "pygame.gpu.Buffer",
+    .tp_basicsize = sizeof(pgBufferObject),
+    .tp_dealloc = (destructor)buffer_dealloc,
+    //.tp_doc = DOC_GPU_BUFFER,
+    .tp_methods = buffer_methods,
+    .tp_init = (initproc)buffer_init,
+    .tp_new = PyType_GenericNew,
+    .tp_getset = buffer_getset
 };
 
 static PyMethodDef gpu_methods[] = {
@@ -465,6 +665,11 @@ MODINIT_DEFINE(gpu)
         return NULL;
     }
 
+    if (PyModule_AddType(module, &pgBuffer_Type)) {
+        Py_XDECREF(module);
+        return NULL;
+    }
+
     DEC_CONST(GPU_SHADERSTAGE_VERTEX);
     DEC_CONST(GPU_SHADERSTAGE_FRAGMENT);
     DEC_CONST(GPU_LOADOP_LOAD);
@@ -481,6 +686,15 @@ MODINIT_DEFINE(gpu)
     DEC_CONST(GPU_PRIMITIVETYPE_POINTLIST);
     DEC_CONST(GPU_FILLMODE_FILL);
     DEC_CONST(GPU_FILLMODE_LINE);
+    DEC_CONST(GPU_BUFFERUSAGE_VERTEX);
+    DEC_CONST(GPU_BUFFERUSAGE_INDEX);
+    DEC_CONST(GPU_BUFFERUSAGE_INDIRECT);
+    DEC_CONST(GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ);
+    DEC_CONST(GPU_BUFFERUSAGE_COMPUTE_STORAGE_READ);
+    DEC_CONST(GPU_BUFFERUSAGE_COMPUTE_STORAGE_WRITE);
+    DEC_CONSTS_("POSITION_VERTEX", POSITION_VERTEX);
+    DEC_CONSTS_("POSITION_COLOR_VERTEX", POSITION_COLOR_VERTEX);
+    DEC_CONSTS_("POSITION_TEXTURE_VERTEX", POSITION_TEXTURE_VERTEX);
 
     apiobj = encapsulate_api(c_api, "gpu");
     if (PyModule_AddObject(module, PYGAMEAPI_LOCAL_ENTRY, apiobj)) {

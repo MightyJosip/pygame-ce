@@ -1,3 +1,4 @@
+from typing import Any
 from pygame.window import Window
 from pygame.typing import ColorLike, RectLike
 
@@ -17,6 +18,16 @@ GPU_PRIMITIVETYPE_LINESTRIP: int
 GPU_PRIMITIVETYPE_POINTLIST: int
 GPU_FILLMODE_FILL: int
 GPU_FILLMODE_LINE: int
+GPU_BUFFERUSAGE_VERTEX: int
+GPU_BUFFERUSAGE_INDEX: int
+GPU_BUFFERUSAGE_INDIRECT: int
+GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ: int
+GPU_BUFFERUSAGE_COMPUTE_STORAGE_READ: int
+GPU_BUFFERUSAGE_COMPUTE_STORAGE_WRITE: int
+
+POSITION_VERTEX: int
+POSITION_COLOR_VERTEX: int
+POSITION_TEXTURE_VERTEX: int
 
 def init() -> None: ...
 def claim_window(window: Window) -> None: ...
@@ -38,5 +49,11 @@ class RenderPass:
 
 
 class Pipeline:
-    def __init__(self, window: Window, vertex_shader: Shader, fragment_shader: Shader, primitive_type: int, fill_mode: int): ...
+    def __init__(self, window: Window, vertex_shader: Shader, fragment_shader: Shader, primitive_type: int, fill_mode: int = GPU_FILLMODE_FILL, vertex_input_state: int = -1): ...
+    def bind(self, render_pass: RenderPass) -> None: ...
+
+
+class Buffer:
+    def __init__(self, usage: int, buffer_type: int, size: int): ...
+    def upload(self, data: list[Any]) -> None: ...
     def bind(self, render_pass: RenderPass) -> None: ...

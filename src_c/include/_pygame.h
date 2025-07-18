@@ -581,6 +581,24 @@ typedef struct {
  */
 
 typedef struct {
+    float x, y, z;
+    Uint8 r, g, b, a;
+} PositionColorVertex;
+
+typedef enum BufferType {
+    POSITION_VERTEX,
+    POSITION_COLOR_VERTEX,
+    POSITION_TEXTURE_VERTEX
+} BufferType;
+
+typedef struct {
+    PyObject_HEAD SDL_GPUBuffer *buffer;
+    SDL_GPUBufferUsageFlags usage;
+    BufferType buffer_type;
+    int no_of_elements;
+} pgBufferObject;
+
+typedef struct {
     PyObject_HEAD SDL_GPUShader *shader;
 } pgShaderObject;
 
