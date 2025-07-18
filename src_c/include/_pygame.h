@@ -579,6 +579,7 @@ typedef struct {
 /*
  * GPU module
  */
+/* TODO: Consider adding TransferBuffer */
 
 typedef struct {
     float x, y, z;

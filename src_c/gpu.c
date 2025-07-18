@@ -175,9 +175,9 @@ render_pass_draw_primitives(pgRenderPassObject *self, PyObject *args, PyObject *
 static PyObject *
 render_pass_set_viewport(pgRenderPassObject *self, PyObject *args, PyObject *kwargs)
 {
-    float x, y, w, h, min_depth, max_depth;
+    float x, y, w, h, min_depth = 0, max_depth = 0;
     char *keywords[] = {"x", "y", "w", "h", "min_depth", "max_depth", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ffffff", keywords,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ffff|ff", keywords,
                                      &x, &y, &w, &h, &min_depth, &max_depth)) {
         return NULL;
     }
@@ -293,9 +293,11 @@ pipeline_init(pgPipelineObject *self, PyObject *args, PyObject *kwargs)
     SDL_GPUPrimitiveType primitive_type;
     SDL_GPUFillMode fill_mode = SDL_GPU_FILLMODE_FILL;
     BufferType vertex_input_state = -1;
-    char *keywords[] = {"window", "vertex_shader", "fragment_shader", "primitive_type", "fill_mode", "vertex_input_state", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!O!O!i|ii", keywords,
-                                     &pgWindow_Type, &window, &pgShader_Type, &vertex_shader, &pgShader_Type, &fragment_shader, &primitive_type, &fill_mode, &vertex_input_state)) {
+    SDL_GPUCullMode cull_mode = SDL_GPU_CULLMODE_NONE;
+    SDL_GPUFrontFace front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
+    char *keywords[] = {"window", "vertex_shader", "fragment_shader", "primitive_type", "fill_mode", "vertex_input_state", "cull_mode", "front_face", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!O!O!i|iiii", keywords,
+                                     &pgWindow_Type, &window, &pgShader_Type, &vertex_shader, &pgShader_Type, &fragment_shader, &primitive_type, &fill_mode, &vertex_input_state, &cull_mode, &front_face)) {
         return -1;
     }
     self->pipeline_info.target_info = (SDL_GPUGraphicsPipelineTargetInfo){
@@ -308,6 +310,8 @@ pipeline_init(pgPipelineObject *self, PyObject *args, PyObject *kwargs)
     self->pipeline_info.fragment_shader = fragment_shader->shader;
     self->pipeline_info.primitive_type = primitive_type;
     self->pipeline_info.rasterizer_state.fill_mode = fill_mode;
+    self->pipeline_info.rasterizer_state.cull_mode = cull_mode;
+    self->pipeline_info.rasterizer_state.front_face = front_face;
     if (vertex_input_state > -1) {
         pipeline_fill_vertex_input_state(self, vertex_input_state);
     }
@@ -692,6 +696,11 @@ MODINIT_DEFINE(gpu)
     DEC_CONST(GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ);
     DEC_CONST(GPU_BUFFERUSAGE_COMPUTE_STORAGE_READ);
     DEC_CONST(GPU_BUFFERUSAGE_COMPUTE_STORAGE_WRITE);
+    DEC_CONST(GPU_CULLMODE_NONE);
+    DEC_CONST(GPU_CULLMODE_FRONT);
+    DEC_CONST(GPU_CULLMODE_BACK);
+    DEC_CONST(GPU_FRONTFACE_COUNTER_CLOCKWISE);
+    DEC_CONST(GPU_FRONTFACE_CLOCKWISE);
     DEC_CONSTS_("POSITION_VERTEX", POSITION_VERTEX);
     DEC_CONSTS_("POSITION_COLOR_VERTEX", POSITION_COLOR_VERTEX);
     DEC_CONSTS_("POSITION_TEXTURE_VERTEX", POSITION_TEXTURE_VERTEX);
