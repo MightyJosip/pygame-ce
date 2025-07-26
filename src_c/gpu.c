@@ -162,13 +162,18 @@ render_pass_end(pgRenderPassObject *self, PyObject *_null)
 static PyObject *
 render_pass_draw_primitives(pgRenderPassObject *self, PyObject *args, PyObject *kwargs)
 {
-    int vertices, instances;
-    char *keywords[] = {"vertices", "instances", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ii", keywords,
-                                     &vertices, &instances)) {
+    int vertices, instances, vertex_offset = 0, indexed = 0, index_offset;
+    char *keywords[] = {"vertices", "instances", "vertex_offset", "indexed", "index_offset", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ii|ipi", keywords,
+                                     &vertices, &instances, &vertex_offset, &indexed, &index_offset)) {
         return NULL;
     }
-    SDL_DrawGPUPrimitives(self->render_pass, vertices, instances, 0, 0);
+    if (indexed) {
+        SDL_DrawGPUIndexedPrimitives(self->render_pass, vertices, instances, index_offset, vertex_offset, 0);
+    }
+    else {
+        SDL_DrawGPUPrimitives(self->render_pass, vertices, instances, vertex_offset, 0);
+    }
     Py_RETURN_NONE;
 }
 
@@ -334,17 +339,23 @@ pipeline_dealloc(pgPipelineObject *self, PyObject *_null)
 
 /* Buffer implementation */
 static int
-buffer_get_element_size(BufferType buffer_type) {
-    switch (buffer_type) {
-        case POSITION_VERTEX:
-            return sizeof(float) * 3;
-        case POSITION_COLOR_VERTEX:
-            return sizeof(float) * 3 + 4 * sizeof(Uint8);
-        case POSITION_TEXTURE_VERTEX:
-            return sizeof(float) * 5;
-        default:
-            return 0;
+buffer_get_element_size(SDL_GPUBufferUsageFlags usage, BufferType buffer_type) {
+    if (usage == SDL_GPU_BUFFERUSAGE_VERTEX) {
+        switch (buffer_type) {
+            case POSITION_VERTEX:
+                return sizeof(float) * 3;
+            case POSITION_COLOR_VERTEX:
+                return sizeof(float) * 3 + 4 * sizeof(Uint8);
+            case POSITION_TEXTURE_VERTEX:
+                return sizeof(float) * 5;
+            default:
+                return 0;
+        }
     }
+    else if (usage == SDL_GPU_BUFFERUSAGE_INDEX) {
+        return sizeof(Uint16);
+    }
+    return 0;
 }
 
 static inline SDL_GPUTransferBuffer*
@@ -369,22 +380,42 @@ buffer_upload_position_color_vertex(pgBufferObject *self, PyObject* data, int si
     return transfer_buffer;
 }
 
+static inline SDL_GPUTransferBuffer*
+buffer_upload_index(pgBufferObject *self, PyObject* data, int size)
+{
+    SDL_GPUTransferBuffer* transfer_buffer = SDL_CreateGPUTransferBuffer(device, &(SDL_GPUTransferBufferCreateInfo) {
+        .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+        .size = size
+    });
+    Uint16* transfer_data = SDL_MapGPUTransferBuffer(device, transfer_buffer, false);
+    for (int i = 0; i < self->no_of_elements; i++) {
+        transfer_data[i] = (Uint16)PyLong_AsInt(PySequence_GetItem(data, i));
+    }
+    SDL_UnmapGPUTransferBuffer(device, transfer_buffer);
+    return transfer_buffer;
+}
+
 static PyObject *
 buffer_upload(pgBufferObject *self, PyObject *args, PyObject *kwargs)
 {
     PyObject* data;
-    int size = buffer_get_element_size(self->buffer_type) * self->no_of_elements;
+    int size = buffer_get_element_size(self->usage, self->buffer_type) * self->no_of_elements;
     char *keywords[] = {"data", NULL};
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", keywords, &data)) {
         return NULL;
     }
     SDL_GPUTransferBuffer* transfer_buffer;
-    switch (self->buffer_type) {
-        case POSITION_COLOR_VERTEX:
-            transfer_buffer = buffer_upload_position_color_vertex(self, data, size);
-            break;
-        default:
-            transfer_buffer = buffer_upload_position_color_vertex(self, data, size);
+    if (self->usage == SDL_GPU_BUFFERUSAGE_VERTEX) {
+        switch (self->buffer_type) {
+            case POSITION_COLOR_VERTEX:
+                transfer_buffer = buffer_upload_position_color_vertex(self, data, size);
+                break;
+            default:
+                transfer_buffer = buffer_upload_position_color_vertex(self, data, size);
+        }
+    }
+    else if (self->usage == SDL_GPU_BUFFERUSAGE_INDEX) {
+        transfer_buffer = buffer_upload_index(self, data, size);
     }
     SDL_GPUCommandBuffer* upload_cmd_buf = SDL_AcquireGPUCommandBuffer(device);
     SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(upload_cmd_buf);
@@ -425,6 +456,14 @@ buffer_bind(pgBufferObject *self, PyObject *args, PyObject *kwargs)
             1
         );
     }
+    else if (self->usage == SDL_GPU_BUFFERUSAGE_INDEX) {
+        SDL_BindGPUIndexBuffer(render_pass->render_pass, 
+            &(SDL_GPUBufferBinding){
+                .buffer = self->buffer,
+                .offset = 0
+            },
+            SDL_GPU_INDEXELEMENTSIZE_16BIT);
+    }
     Py_RETURN_NONE;
 }
 
@@ -433,15 +472,15 @@ buffer_init(pgBufferObject *self, PyObject *args, PyObject *kwargs)
 {
     SDL_GPUBuffer *buffer = NULL;
     SDL_GPUBufferUsageFlags usage;
-    BufferType buffer_type;
+    BufferType buffer_type = -1;
     Uint32 size;
     int element_size;
-    char *keywords[] = {"usage", "buffer_type", "size", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "iii", keywords,
-                                     &usage, &buffer_type, &size)) {
+    char *keywords[] = {"usage", "size", "buffer_type", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ii|i", keywords,
+                                     &usage, &size, &buffer_type)) {
         return -1;
     }
-    element_size = buffer_get_element_size(buffer_type);
+    element_size = buffer_get_element_size(usage, buffer_type);
     if (!element_size) {
         RAISERETURN(pgExc_SDLError, "Unknown buffer type!", -1)
     }
