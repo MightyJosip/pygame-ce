@@ -20,6 +20,8 @@ static PyTypeObject pgPipeline_Type;
 
 static PyTypeObject pgBuffer_Type;
 
+static PyTypeObject pgSampler_Type;
+
 #define pgShader_Check(x) \
     (PyObject_IsInstance((x), (PyObject *)&pgShader_Type))
 
@@ -31,6 +33,9 @@ static PyTypeObject pgBuffer_Type;
 
 #define pgBuffer_Check(x) \
     (PyObject_IsInstance((x), (PyObject *)&pgBuffer_Type))
+
+#define pgSampler_Check(x) \
+    (PyObject_IsInstance((x), (PyObject *)&pgSampler_Type))
 
 #define DEC_CONSTS_(x, y)                           \
     if (PyModule_AddIntConstant(module, x, (int)y)) \
@@ -499,9 +504,52 @@ buffer_init(pgBufferObject *self, PyObject *args, PyObject *kwargs)
 }
 
 static void
-buffer_dealloc(pgBufferObject *self, PyObject *_null) {
+buffer_dealloc(pgBufferObject *self, PyObject *_null)
+{
     if (device != NULL && self->buffer) {
         SDL_ReleaseGPUBuffer(device, self->buffer);
+    }
+    Py_TYPE(self)->tp_free(self);
+}
+
+/* Sampler implementation */
+static int
+sampler_init(pgSamplerObject *self, PyObject *args, PyObject *kwargs)
+{
+    SDL_GPUSampler *sampler = NULL;
+    SDL_GPUFilter filter;
+    SDL_GPUSamplerMipmapMode mipmap_mode;
+    SDL_GPUSamplerAddressMode address_mode;
+    float anisotropy = 0;
+    char *keywords[] = {"filter", "mipmap_mode", "address_mode", "anisotropy", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "iii|f", keywords,
+                                     &filter, &mipmap_mode, &address_mode, &anisotropy)) {
+        return -1;
+    }
+    
+    self->sampler_info.min_filter = filter;
+    self->sampler_info.mag_filter = filter;
+    self->sampler_info.mipmap_mode = mipmap_mode;
+    self->sampler_info.address_mode_u = address_mode;
+    self->sampler_info.address_mode_v = address_mode;
+    self->sampler_info.address_mode_w = address_mode;
+    if (anisotropy) {
+        self->sampler_info.enable_anisotropy = true;
+        self->sampler_info.max_anisotropy = anisotropy;
+    }
+    sampler = SDL_CreateGPUSampler(device, &self->sampler_info);
+    if (sampler == NULL) {
+        RAISERETURN(pgExc_SDLError, SDL_GetError(), -1);
+    }
+    self->sampler = sampler;
+    return 0;
+}
+
+static void
+sampler_dealloc(pgSamplerObject *self, PyObject *_null)
+{
+    if (device != NULL && self->sampler) {
+        SDL_ReleaseGPUSampler(device, self->sampler);
     }
     Py_TYPE(self)->tp_free(self);
 }
@@ -596,6 +644,12 @@ static PyMethodDef buffer_methods[] = {
 
 static PyGetSetDef buffer_getset[] = {{NULL, 0, NULL, NULL, NULL}};
 
+static PyMethodDef sampler_methods[] = {
+    {NULL, NULL, 0, NULL}
+};
+
+static PyGetSetDef sampler_getset[] = {{NULL, 0, NULL, NULL, NULL}};
+
 static PyTypeObject pgShader_Type = {
     PyVarObject_HEAD_INIT(NULL, 0).tp_name = "pygame.gpu.Shader",
     .tp_basicsize = sizeof(pgShaderObject),
@@ -638,6 +692,17 @@ static PyTypeObject pgBuffer_Type = {
     .tp_init = (initproc)buffer_init,
     .tp_new = PyType_GenericNew,
     .tp_getset = buffer_getset
+};
+
+static PyTypeObject pgSampler_Type = {
+    PyVarObject_HEAD_INIT(NULL, 0).tp_name = "pygame.gpu.Sampler",
+    .tp_basicsize = sizeof(pgSamplerObject),
+    .tp_dealloc = (destructor)sampler_dealloc,
+    //.tp_doc = DOC_GPU_SAMPLER,
+    .tp_methods = sampler_methods,
+    .tp_init = (initproc)sampler_init,
+    .tp_new = PyType_GenericNew,
+    .tp_getset = sampler_getset
 };
 
 static PyMethodDef gpu_methods[] = {
@@ -713,6 +778,11 @@ MODINIT_DEFINE(gpu)
         return NULL;
     }
 
+    if (PyModule_AddType(module, &pgSampler_Type)) {
+        Py_XDECREF(module);
+        return NULL;
+    }
+
     DEC_CONST(GPU_SHADERSTAGE_VERTEX);
     DEC_CONST(GPU_SHADERSTAGE_FRAGMENT);
     DEC_CONST(GPU_LOADOP_LOAD);
@@ -740,6 +810,13 @@ MODINIT_DEFINE(gpu)
     DEC_CONST(GPU_CULLMODE_BACK);
     DEC_CONST(GPU_FRONTFACE_COUNTER_CLOCKWISE);
     DEC_CONST(GPU_FRONTFACE_CLOCKWISE);
+    DEC_CONST(GPU_FILTER_NEAREST);
+    DEC_CONST(GPU_FILTER_LINEAR);
+    DEC_CONST(GPU_SAMPLERMIPMAPMODE_NEAREST);
+    DEC_CONST(GPU_SAMPLERMIPMAPMODE_LINEAR);
+    DEC_CONST(GPU_SAMPLERADDRESSMODE_REPEAT);
+    DEC_CONST(GPU_SAMPLERADDRESSMODE_MIRRORED_REPEAT);
+    DEC_CONST(GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE);
     DEC_CONSTS_("POSITION_VERTEX", POSITION_VERTEX);
     DEC_CONSTS_("POSITION_COLOR_VERTEX", POSITION_COLOR_VERTEX);
     DEC_CONSTS_("POSITION_TEXTURE_VERTEX", POSITION_TEXTURE_VERTEX);

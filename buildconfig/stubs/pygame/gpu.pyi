@@ -29,6 +29,13 @@ GPU_CULLMODE_FRONT: int
 GPU_CULLMODE_BACK: int
 GPU_FRONTFACE_COUNTER_CLOCKWISE: int
 GPU_FRONTFACE_CLOCKWISE: int
+GPU_FILTER_NEAREST: int
+GPU_FILTER_LINEAR: int
+GPU_SAMPLERMIPMAPMODE_NEAREST: int
+GPU_SAMPLERMIPMAPMODE_LINEAR: int
+GPU_SAMPLERADDRESSMODE_REPEAT: int
+GPU_SAMPLERADDRESSMODE_MIRRORED_REPEAT: int
+GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE: int
 
 POSITION_VERTEX: int
 POSITION_COLOR_VERTEX: int
@@ -62,3 +69,7 @@ class Buffer:
     def __init__(self, usage: int, size: int, buffer_type: int = -1): ...
     def upload(self, data: list[Any]) -> None: ...
     def bind(self, render_pass: RenderPass) -> None: ...
+
+
+class Sampler:
+    def __init__(self, filter: int, mipmap_mode: int, address_mode: int, anisotropy: float = 0): ...
