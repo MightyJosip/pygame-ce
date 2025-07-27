@@ -586,6 +586,11 @@ typedef struct {
     Uint8 r, g, b, a;
 } PositionColorVertex;
 
+typedef struct {
+    float x, y, z;
+    float u, v;
+} PositionTextureVertex;
+
 typedef enum BufferType {
     POSITION_VERTEX,
     POSITION_COLOR_VERTEX,
@@ -598,6 +603,13 @@ typedef struct {
     BufferType buffer_type;
     int no_of_elements;
 } pgBufferObject;
+
+typedef struct {
+    PyObject_HEAD SDL_GPUTexture *texture;
+    int width;
+    int height;
+    SDL_GPUTextureCreateInfo texture_info;
+} pgGPUTextureObject;
 
 typedef struct {
     PyObject_HEAD SDL_GPUShader *shader;

@@ -20,6 +20,8 @@ static PyTypeObject pgPipeline_Type;
 
 static PyTypeObject pgBuffer_Type;
 
+static PyTypeObject pgGPUTexture_Type;
+
 static PyTypeObject pgSampler_Type;
 
 #define pgShader_Check(x) \
@@ -33,6 +35,9 @@ static PyTypeObject pgSampler_Type;
 
 #define pgBuffer_Check(x) \
     (PyObject_IsInstance((x), (PyObject *)&pgBuffer_Type))
+
+#define pgGPUTexture_Check(x) \
+    (PyObject_IsInstance((x), (PyObject *)&pgGPUTexture_Type))
 
 #define pgSampler_Check(x) \
     (PyObject_IsInstance((x), (PyObject *)&pgSampler_Type))
@@ -278,6 +283,30 @@ pipeline_fill_vertex_input_state(pgPipelineObject *self, BufferType vertex_input
             .vertex_attributes = vertex_attribute
         };
     }
+    else if (vertex_input_state == POSITION_TEXTURE_VERTEX) {
+        buffer_description = (SDL_GPUVertexBufferDescription*)malloc(sizeof(SDL_GPUVertexBufferDescription));
+        buffer_description->slot = 0;
+        buffer_description->input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+        buffer_description->instance_step_rate = 0;
+        buffer_description->pitch = sizeof(PositionTextureVertex);
+
+        vertex_attribute = (SDL_GPUVertexAttribute*)malloc(2 * sizeof(SDL_GPUVertexAttribute));
+        vertex_attribute[0].buffer_slot = 0;
+        vertex_attribute[0].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
+        vertex_attribute[0].location = 0;
+        vertex_attribute[0].offset = 0;
+        vertex_attribute[1].buffer_slot = 0;
+        vertex_attribute[1].format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2;
+        vertex_attribute[1].location = 1;
+        vertex_attribute[1].offset = sizeof(float) * 3;
+
+        self->pipeline_info.vertex_input_state = (SDL_GPUVertexInputState){
+            .num_vertex_buffers = 1,
+            .vertex_buffer_descriptions = buffer_description,
+            .num_vertex_attributes = 2,
+            .vertex_attributes = vertex_attribute
+        };
+    }
     free(buffer_description);
     free(vertex_attribute);
 }
@@ -386,6 +415,26 @@ buffer_upload_position_color_vertex(pgBufferObject *self, PyObject* data, int si
 }
 
 static inline SDL_GPUTransferBuffer*
+buffer_upload_position_texture_vertex(pgBufferObject *self, PyObject* data, int size)
+{
+    SDL_GPUTransferBuffer* transfer_buffer = SDL_CreateGPUTransferBuffer(device, &(SDL_GPUTransferBufferCreateInfo) {
+        .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+        .size = size
+    });
+    PositionTextureVertex* transfer_data = SDL_MapGPUTransferBuffer(device, transfer_buffer, false);
+    for (int i = 0; i < self->no_of_elements; i++) {
+        PyObject* inner_data_obj = PySequence_GetItem(data, i);
+        transfer_data[i].x = (float)PyFloat_AsDouble(PySequence_GetItem(inner_data_obj, 0));
+        transfer_data[i].y = (float)PyFloat_AsDouble(PySequence_GetItem(inner_data_obj, 1));
+        transfer_data[i].z = (float)PyFloat_AsDouble(PySequence_GetItem(inner_data_obj, 2));
+        transfer_data[i].u = (float)PyFloat_AsDouble(PySequence_GetItem(inner_data_obj, 3));
+        transfer_data[i].v = (float)PyFloat_AsDouble(PySequence_GetItem(inner_data_obj, 4));
+    }
+    SDL_UnmapGPUTransferBuffer(device, transfer_buffer);
+    return transfer_buffer;
+}
+
+static inline SDL_GPUTransferBuffer*
 buffer_upload_index(pgBufferObject *self, PyObject* data, int size)
 {
     SDL_GPUTransferBuffer* transfer_buffer = SDL_CreateGPUTransferBuffer(device, &(SDL_GPUTransferBufferCreateInfo) {
@@ -414,6 +463,9 @@ buffer_upload(pgBufferObject *self, PyObject *args, PyObject *kwargs)
         switch (self->buffer_type) {
             case POSITION_COLOR_VERTEX:
                 transfer_buffer = buffer_upload_position_color_vertex(self, data, size);
+                break;
+            case POSITION_TEXTURE_VERTEX:
+                transfer_buffer = buffer_upload_position_texture_vertex(self, data, size);
                 break;
             default:
                 transfer_buffer = buffer_upload_position_color_vertex(self, data, size);
@@ -512,7 +564,118 @@ buffer_dealloc(pgBufferObject *self, PyObject *_null)
     Py_TYPE(self)->tp_free(self);
 }
 
+/* Texture implementation */
+static PyObject *
+texture_upload(pgGPUTextureObject *self, PyObject *args, PyObject *kwargs)
+{
+    pgSurfaceObject *surfobj;
+    SDL_Surface *surf = NULL;
+    char *keywords[] = {"surface", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!", keywords,
+                                     &pgSurface_Type, &surfobj)) {
+        return NULL;
+    }
+    surf = pgSurface_AsSurface(surfobj);
+    SURF_INIT_CHECK(surf)
+
+
+    PG_PixelFormat *format;
+    SDL_Palette *palette;
+    if (!PG_GetSurfaceDetails(surf, &format, &palette)) {
+        return RAISE(pgExc_SDLError, SDL_GetError());
+    }
+    printf("String: %d\n", PG_SURF_FORMATENUM(surf));
+
+
+    SDL_GPUTransferBuffer* transfer_buffer = SDL_CreateGPUTransferBuffer(
+		device,
+		&(SDL_GPUTransferBufferCreateInfo) {
+			.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+			.size = self->width * self->height * 4
+		}
+	);
+    Uint8* transfer_data = SDL_MapGPUTransferBuffer(device, transfer_buffer, false);
+    SDL_memcpy(transfer_data, surf->pixels, self->width * self->height * 4);
+    SDL_UnmapGPUTransferBuffer(device, transfer_buffer);
+    SDL_GPUCommandBuffer* upload_cmd_buf = SDL_AcquireGPUCommandBuffer(device);
+    SDL_GPUCopyPass* copy_pass = SDL_BeginGPUCopyPass(upload_cmd_buf);
+    SDL_UploadToGPUTexture(
+        copy_pass,
+        &(SDL_GPUTextureTransferInfo){
+            .transfer_buffer = transfer_buffer,
+            .offset = 0
+        },
+        &(SDL_GPUTextureRegion) {
+            .texture = self->texture,
+            .w = self->width,
+            .h = self->height,
+            .d = 1
+        },
+        false
+    );
+    SDL_ReleaseGPUTransferBuffer(device, transfer_buffer);
+    SDL_EndGPUCopyPass(copy_pass);
+	SDL_SubmitGPUCommandBuffer(upload_cmd_buf);
+    Py_RETURN_NONE;
+}
+
+static int
+texture_init(pgGPUTextureObject *self, PyObject *args, PyObject *kwargs)
+{
+    SDL_GPUTexture *texture = NULL;
+    SDL_GPUTextureType texture_type;
+    SDL_GPUTextureUsageFlags usage;
+    int width, height;
+    PyObject *sizeobj = NULL;
+    char *keywords[] = {"size", "texture_type", "usage", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "Oii", keywords,
+                                     &sizeobj, &texture_type, &usage)) {
+        return -1;
+    }
+    if (!pg_TwoIntsFromObj(sizeobj, &width, &height)) {
+        RAISERETURN(PyExc_TypeError, "invalid size argument", -1)
+    }
+    self->texture_info.type = texture_type;
+    self->texture_info.format = SDL_GPU_TEXTUREFORMAT_B8G8R8A8_UNORM;
+    self->texture_info.width = width;
+    self->texture_info.height = height;
+    self->texture_info.layer_count_or_depth = 1;
+    self->texture_info.num_levels = 1;
+    self->texture_info.usage = usage;
+    texture = SDL_CreateGPUTexture(device, &self->texture_info);
+    if (texture == NULL) {
+        RAISERETURN(pgExc_SDLError, SDL_GetError(), -1);
+    }
+    self->texture = texture;
+    self->width = width;
+    self->height = height;
+    return 0;
+}
+
+static void
+texture_dealloc(pgGPUTextureObject *self, PyObject *_null)
+{
+    if (device != NULL && self->texture) {
+        SDL_ReleaseGPUTexture(device, self->texture);
+    }
+    Py_TYPE(self)->tp_free(self);
+}
+
 /* Sampler implementation */
+static PyObject *
+sampler_bind(pgSamplerObject *self, PyObject *args, PyObject *kwargs)
+{
+    pgRenderPassObject *render_pass;
+    pgGPUTextureObject *texture;
+    char *keywords[] = {"render_pass", "texture", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!O!", keywords,
+                                     &pgRenderPass_Type, &render_pass, &pgGPUTexture_Type, &texture)) {
+        return NULL;
+    }
+    SDL_BindGPUFragmentSamplers(render_pass->render_pass, 0, &(SDL_GPUTextureSamplerBinding){ .texture = texture->texture, .sampler = self->sampler }, 1);
+    Py_RETURN_NONE;
+}
+
 static int
 sampler_init(pgSamplerObject *self, PyObject *args, PyObject *kwargs)
 {
@@ -644,7 +807,17 @@ static PyMethodDef buffer_methods[] = {
 
 static PyGetSetDef buffer_getset[] = {{NULL, 0, NULL, NULL, NULL}};
 
+static PyMethodDef texture_methods[] = {
+    {"upload", (PyCFunction)texture_upload,
+     METH_VARARGS | METH_KEYWORDS, NULL},
+    {NULL, NULL, 0, NULL}
+};
+
+static PyGetSetDef texture_getset[] = {{NULL, 0, NULL, NULL, NULL}};
+
 static PyMethodDef sampler_methods[] = {
+    {"bind", (PyCFunction)sampler_bind,
+     METH_VARARGS | METH_KEYWORDS, NULL},
     {NULL, NULL, 0, NULL}
 };
 
@@ -694,6 +867,17 @@ static PyTypeObject pgBuffer_Type = {
     .tp_getset = buffer_getset
 };
 
+static PyTypeObject pgGPUTexture_Type = {
+    PyVarObject_HEAD_INIT(NULL, 0).tp_name = "pygame.gpu.Texture",
+    .tp_basicsize = sizeof(pgGPUTextureObject),
+    .tp_dealloc = (destructor)texture_dealloc,
+    //.tp_doc = DOC_GPU_TEXTURE,
+    .tp_methods = texture_methods,
+    .tp_init = (initproc)texture_init,
+    .tp_new = PyType_GenericNew,
+    .tp_getset = texture_getset
+};
+
 static PyTypeObject pgSampler_Type = {
     PyVarObject_HEAD_INIT(NULL, 0).tp_name = "pygame.gpu.Sampler",
     .tp_basicsize = sizeof(pgSamplerObject),
@@ -732,6 +916,10 @@ MODINIT_DEFINE(gpu)
        the module is not loaded.
     */
     import_pygame_base();
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+    import_pygame_surface();
     if (PyErr_Occurred()) {
         return NULL;
     }
@@ -778,6 +966,11 @@ MODINIT_DEFINE(gpu)
         return NULL;
     }
 
+    if (PyModule_AddType(module, &pgGPUTexture_Type)) {
+        Py_XDECREF(module);
+        return NULL;
+    }
+
     if (PyModule_AddType(module, &pgSampler_Type)) {
         Py_XDECREF(module);
         return NULL;
@@ -817,6 +1010,18 @@ MODINIT_DEFINE(gpu)
     DEC_CONST(GPU_SAMPLERADDRESSMODE_REPEAT);
     DEC_CONST(GPU_SAMPLERADDRESSMODE_MIRRORED_REPEAT);
     DEC_CONST(GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE);
+    DEC_CONST(GPU_TEXTURETYPE_2D);
+    DEC_CONST(GPU_TEXTURETYPE_2D_ARRAY);
+    DEC_CONST(GPU_TEXTURETYPE_3D);
+    DEC_CONST(GPU_TEXTURETYPE_CUBE);
+    DEC_CONST(GPU_TEXTURETYPE_CUBE_ARRAY);
+    DEC_CONST(GPU_TEXTUREUSAGE_SAMPLER);
+    DEC_CONST(GPU_TEXTUREUSAGE_COLOR_TARGET);
+    DEC_CONST(GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET);
+    DEC_CONST(GPU_TEXTUREUSAGE_GRAPHICS_STORAGE_READ);
+    DEC_CONST(GPU_TEXTUREUSAGE_COMPUTE_STORAGE_READ);
+    DEC_CONST(GPU_TEXTUREUSAGE_COMPUTE_STORAGE_WRITE);
+    DEC_CONST(GPU_TEXTUREUSAGE_COMPUTE_STORAGE_SIMULTANEOUS_READ_WRITE);
     DEC_CONSTS_("POSITION_VERTEX", POSITION_VERTEX);
     DEC_CONSTS_("POSITION_COLOR_VERTEX", POSITION_COLOR_VERTEX);
     DEC_CONSTS_("POSITION_TEXTURE_VERTEX", POSITION_TEXTURE_VERTEX);

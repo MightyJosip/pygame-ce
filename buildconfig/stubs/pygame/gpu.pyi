@@ -1,4 +1,5 @@
-from typing import Any
+from typing import Any, Iterable
+from pygame.surface import Surface
 from pygame.window import Window
 from pygame.typing import ColorLike, RectLike
 
@@ -36,6 +37,18 @@ GPU_SAMPLERMIPMAPMODE_LINEAR: int
 GPU_SAMPLERADDRESSMODE_REPEAT: int
 GPU_SAMPLERADDRESSMODE_MIRRORED_REPEAT: int
 GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE: int
+GPU_TEXTURETYPE_2D: int
+GPU_TEXTURETYPE_2D_ARRAY: int
+GPU_TEXTURETYPE_3D: int
+GPU_TEXTURETYPE_CUBE: int
+GPU_TEXTURETYPE_CUBE_ARRAY: int
+GPU_TEXTUREUSAGE_SAMPLER: int
+GPU_TEXTUREUSAGE_COLOR_TARGET: int
+GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET: int
+GPU_TEXTUREUSAGE_GRAPHICS_STORAGE_READ: int
+GPU_TEXTUREUSAGE_COMPUTE_STORAGE_READ: int
+GPU_TEXTUREUSAGE_COMPUTE_STORAGE_WRITE: int
+GPU_TEXTUREUSAGE_COMPUTE_STORAGE_SIMULTANEOUS_READ_WRITE: int
 
 POSITION_VERTEX: int
 POSITION_COLOR_VERTEX: int
@@ -71,5 +84,11 @@ class Buffer:
     def bind(self, render_pass: RenderPass) -> None: ...
 
 
+class Texture:
+    def __init__(self, size: Iterable[int], texture_type: int, usage: int): ...
+    def upload(self, surface: Surface) -> None: ...
+
+
 class Sampler:
     def __init__(self, filter: int, mipmap_mode: int, address_mode: int, anisotropy: float = 0): ...
+    def bind(self, render_pass: RenderPass, texture: Texture) -> None: ...
