@@ -1,4 +1,5 @@
 from typing import Any, Iterable
+from ctypes import Structure
 from pygame.surface import Surface
 from pygame.window import Window
 from pygame.typing import ColorLike, RectLike
@@ -49,13 +50,30 @@ GPU_TEXTUREUSAGE_GRAPHICS_STORAGE_READ: int
 GPU_TEXTUREUSAGE_COMPUTE_STORAGE_READ: int
 GPU_TEXTUREUSAGE_COMPUTE_STORAGE_WRITE: int
 GPU_TEXTUREUSAGE_COMPUTE_STORAGE_SIMULTANEOUS_READ_WRITE: int
+GPU_BLENDFACTOR_ZERO: int
+GPU_BLENDFACTOR_ONE: int
+GPU_BLENDFACTOR_SRC_COLOR: int
+GPU_BLENDFACTOR_ONE_MINUS_SRC_COLOR: int
+GPU_BLENDFACTOR_DST_COLOR: int
+GPU_BLENDFACTOR_ONE_MINUS_DST_COLOR: int
+GPU_BLENDFACTOR_SRC_ALPHA: int
+GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA: int
+GPU_BLENDFACTOR_DST_ALPHA: int
+GPU_BLENDFACTOR_ONE_MINUS_DST_ALPHA: int
+GPU_BLENDFACTOR_CONSTANT_COLOR: int
+GPU_BLENDFACTOR_ONE_MINUS_CONSTANT_COLOR: int
+GPU_BLENDFACTOR_SRC_ALPHA_SATURATE: int
 
 POSITION_VERTEX: int
 POSITION_COLOR_VERTEX: int
 POSITION_TEXTURE_VERTEX: int
+PUSH_VERTEX: int
+PUSH_FRAGMENT: int
+PUSH_UNIFORM: int
 
 def init() -> None: ...
 def claim_window(window: Window) -> None: ...
+def push_data(structure: Structure, data_type: int) -> None: ...
 def submit() -> None: ...
 def quit() -> None: ...
 

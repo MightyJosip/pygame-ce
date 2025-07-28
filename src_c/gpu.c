@@ -311,6 +311,38 @@ pipeline_fill_vertex_input_state(pgPipelineObject *self, BufferType vertex_input
     free(vertex_attribute);
 }
 
+static void
+pipeline_fill_target_info(pgPipelineObject *self, pgWindowObject *window, SDL_GPUBlendFactor src_color_blendfactor, SDL_GPUBlendFactor src_alpha_blendfactor, SDL_GPUBlendFactor dst_color_blendfactor, SDL_GPUBlendFactor dst_alpha_blendfactor)
+{
+    SDL_GPUColorTargetDescription *color_target_descriptions = NULL;
+    if (src_color_blendfactor || src_alpha_blendfactor || dst_color_blendfactor || dst_alpha_blendfactor) {
+        color_target_descriptions = (SDL_GPUColorTargetDescription *)malloc(sizeof(SDL_GPUColorTargetDescription));
+        color_target_descriptions->format = SDL_GetGPUSwapchainTextureFormat(device, window->_win);
+        color_target_descriptions->blend_state.enable_blend = true;
+        color_target_descriptions->blend_state.color_blend_op = SDL_GPU_BLENDOP_ADD;
+        color_target_descriptions->blend_state.alpha_blend_op = SDL_GPU_BLENDOP_ADD;
+        color_target_descriptions->blend_state.src_color_blendfactor = src_color_blendfactor;
+        color_target_descriptions->blend_state.src_alpha_blendfactor = src_alpha_blendfactor;
+        color_target_descriptions->blend_state.dst_color_blendfactor = dst_color_blendfactor;
+        color_target_descriptions->blend_state.dst_alpha_blendfactor = dst_alpha_blendfactor;
+        self->pipeline_info.target_info = (SDL_GPUGraphicsPipelineTargetInfo){
+            .num_color_targets = 1,
+            .color_target_descriptions = color_target_descriptions
+        };
+    }
+    else {
+        self->pipeline_info.target_info = (SDL_GPUGraphicsPipelineTargetInfo){
+            .num_color_targets = 1,
+            .color_target_descriptions = (SDL_GPUColorTargetDescription[]){{
+                .format = SDL_GetGPUSwapchainTextureFormat(device, window->_win)
+            }},
+        };
+    }
+    if (color_target_descriptions != NULL) {
+        free(color_target_descriptions);
+    }
+}
+
 static PyObject *
 pipeline_bind(pgPipelineObject *self, PyObject *args, PyObject *kwargs)
 {
@@ -334,17 +366,13 @@ pipeline_init(pgPipelineObject *self, PyObject *args, PyObject *kwargs)
     BufferType vertex_input_state = -1;
     SDL_GPUCullMode cull_mode = SDL_GPU_CULLMODE_NONE;
     SDL_GPUFrontFace front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
-    char *keywords[] = {"window", "vertex_shader", "fragment_shader", "primitive_type", "fill_mode", "vertex_input_state", "cull_mode", "front_face", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!O!O!i|iiii", keywords,
-                                     &pgWindow_Type, &window, &pgShader_Type, &vertex_shader, &pgShader_Type, &fragment_shader, &primitive_type, &fill_mode, &vertex_input_state, &cull_mode, &front_face)) {
+    SDL_GPUBlendFactor src_color_blendfactor = SDL_GPU_BLENDFACTOR_INVALID, src_alpha_blendfactor = SDL_GPU_BLENDFACTOR_INVALID, dst_color_blendfactor = SDL_GPU_BLENDFACTOR_INVALID, dst_alpha_blendfactor = SDL_GPU_BLENDFACTOR_INVALID;
+    char *keywords[] = {"window", "vertex_shader", "fragment_shader", "primitive_type", "fill_mode", "vertex_input_state", "cull_mode", "front_face", "src_color_blendfactor", "src_alpha_blendfactor", "dst_color_blendfactor", "dst_alpha_blendfactor", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!O!O!i|iiiiiiii", keywords,
+                                     &pgWindow_Type, &window, &pgShader_Type, &vertex_shader, &pgShader_Type, &fragment_shader, &primitive_type, &fill_mode, &vertex_input_state, &cull_mode, &front_face, &src_color_blendfactor, &src_alpha_blendfactor, &dst_color_blendfactor, &dst_alpha_blendfactor)) {
         return -1;
     }
-    self->pipeline_info.target_info = (SDL_GPUGraphicsPipelineTargetInfo){
-        .num_color_targets = 1,
-        .color_target_descriptions = (SDL_GPUColorTargetDescription[]){{
-            .format = SDL_GetGPUSwapchainTextureFormat(device, window->_win)
-        }},
-    };
+    pipeline_fill_target_info(self, window, src_color_blendfactor, src_alpha_blendfactor, dst_color_blendfactor, dst_alpha_blendfactor);
     self->pipeline_info.vertex_shader = vertex_shader->shader;
     self->pipeline_info.fragment_shader = fragment_shader->shader;
     self->pipeline_info.primitive_type = primitive_type;
@@ -584,7 +612,6 @@ texture_upload(pgGPUTextureObject *self, PyObject *args, PyObject *kwargs)
     if (!PG_GetSurfaceDetails(surf, &format, &palette)) {
         return RAISE(pgExc_SDLError, SDL_GetError());
     }
-    printf("String: %d\n", PG_SURF_FORMATENUM(surf));
 
 
     SDL_GPUTransferBuffer* transfer_buffer = SDL_CreateGPUTransferBuffer(
@@ -747,6 +774,33 @@ claim_window(PyObject *self, PyObject *args, PyObject *kwargs)
 }
 
 static PyObject *
+push_data(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+    PyObject* structure_obj;
+    Py_buffer view;
+    UniformDataType data_type;
+    char *keywords[] = {"structure", "data_type", NULL};
+    if (!PyArg_ParseTuple(args, "Oi", &structure_obj, &data_type)) {
+        return NULL;
+    }
+    if (PyObject_GetBuffer(structure_obj, &view, PyBUF_SIMPLE) != 0) {
+        RAISE(pgExc_SDLError, "Expected a ctypes Structure object");
+    }
+    switch (data_type) {
+        case PUSH_VERTEX:
+            SDL_PushGPUVertexUniformData(cmdbuf, 0, view.buf, (Uint32)view.len);
+            break;
+        case PUSH_FRAGMENT:
+            SDL_PushGPUFragmentUniformData(cmdbuf, 0, view.buf, (Uint32)view.len);
+            break;
+        case PUSH_UNIFORM:
+            SDL_PushGPUComputeUniformData(cmdbuf, 0, view.buf, (Uint32)view.len);
+            break;
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject *
 submit(PyObject *self, PyObject *_null)
 {
     if (cmdbuf != NULL) {
@@ -892,6 +946,7 @@ static PyTypeObject pgSampler_Type = {
 static PyMethodDef gpu_methods[] = {
     {"init", (PyCFunction)init, METH_NOARGS, NULL},
     {"claim_window", (PyCFunction)claim_window, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"push_data", (PyCFunction)push_data, METH_VARARGS | METH_KEYWORDS, NULL},
     {"submit", (PyCFunction)submit, METH_NOARGS, NULL},
     {"quit", (PyCFunction)quit, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
@@ -1022,9 +1077,25 @@ MODINIT_DEFINE(gpu)
     DEC_CONST(GPU_TEXTUREUSAGE_COMPUTE_STORAGE_READ);
     DEC_CONST(GPU_TEXTUREUSAGE_COMPUTE_STORAGE_WRITE);
     DEC_CONST(GPU_TEXTUREUSAGE_COMPUTE_STORAGE_SIMULTANEOUS_READ_WRITE);
+    DEC_CONST(GPU_BLENDFACTOR_ZERO);
+    DEC_CONST(GPU_BLENDFACTOR_ONE);
+    DEC_CONST(GPU_BLENDFACTOR_SRC_COLOR);
+    DEC_CONST(GPU_BLENDFACTOR_ONE_MINUS_SRC_COLOR);
+    DEC_CONST(GPU_BLENDFACTOR_DST_COLOR);
+    DEC_CONST(GPU_BLENDFACTOR_ONE_MINUS_DST_COLOR);
+    DEC_CONST(GPU_BLENDFACTOR_SRC_ALPHA);
+    DEC_CONST(GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA);
+    DEC_CONST(GPU_BLENDFACTOR_DST_ALPHA);
+    DEC_CONST(GPU_BLENDFACTOR_ONE_MINUS_DST_ALPHA);
+    DEC_CONST(GPU_BLENDFACTOR_CONSTANT_COLOR);
+    DEC_CONST(GPU_BLENDFACTOR_ONE_MINUS_CONSTANT_COLOR);
+    DEC_CONST(GPU_BLENDFACTOR_SRC_ALPHA_SATURATE);
     DEC_CONSTS_("POSITION_VERTEX", POSITION_VERTEX);
     DEC_CONSTS_("POSITION_COLOR_VERTEX", POSITION_COLOR_VERTEX);
     DEC_CONSTS_("POSITION_TEXTURE_VERTEX", POSITION_TEXTURE_VERTEX);
+    DEC_CONSTS_("PUSH_VERTEX", PUSH_VERTEX);
+    DEC_CONSTS_("PUSH_FRAGMENT", PUSH_FRAGMENT);
+    DEC_CONSTS_("PUSH_UNIFORM", PUSH_UNIFORM);
 
     apiobj = encapsulate_api(c_api, "gpu");
     if (PyModule_AddObject(module, PYGAMEAPI_LOCAL_ENTRY, apiobj)) {

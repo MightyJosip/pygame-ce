@@ -597,6 +597,12 @@ typedef enum BufferType {
     POSITION_TEXTURE_VERTEX
 } BufferType;
 
+typedef enum UniformDataType {
+    PUSH_VERTEX,
+    PUSH_FRAGMENT,
+    PUSH_UNIFORM
+} UniformDataType;
+
 typedef struct {
     PyObject_HEAD SDL_GPUBuffer *buffer;
     SDL_GPUBufferUsageFlags usage;
