@@ -90,8 +90,7 @@ surface_respect_clip_rect(SDL_Surface *surface, SDL_Rect *rect)
 }
 
 static int
-surface_fill_blend_add(SDL_Surface *surface, PG_PixelFormat *fmt,
-                       SDL_Palette *palette, SDL_Rect *rect, Uint32 color)
+surface_fill_blend_add(SDL_Surface *surface, SDL_Rect *rect, Uint32 color)
 {
     Uint8 *pixels;
     int width = rect->w;
@@ -106,7 +105,11 @@ surface_fill_blend_add(SDL_Surface *surface, PG_PixelFormat *fmt,
     int ppa;
     SDL_BlendMode mode;
     SDL_GetSurfaceBlendMode(surface, &mode);
-
+    PG_PixelFormat *fmt;
+    SDL_Palette *palette;
+    if (!PG_GetSurfaceDetails(surface, &fmt, &palette)) {
+        return -1;
+    }
     ppa = (fmt->Amask && mode != SDL_BLENDMODE_NONE);
 
     pixels = (Uint8 *)surface->pixels + (Uint16)rect->y * surface->pitch +
@@ -179,8 +182,7 @@ surface_fill_blend_add(SDL_Surface *surface, PG_PixelFormat *fmt,
 }
 
 static int
-surface_fill_blend_sub(SDL_Surface *surface, PG_PixelFormat *fmt,
-                       SDL_Palette *palette, SDL_Rect *rect, Uint32 color)
+surface_fill_blend_sub(SDL_Surface *surface, SDL_Rect *rect, Uint32 color)
 {
     Uint8 *pixels;
     int width = rect->w;
@@ -195,7 +197,11 @@ surface_fill_blend_sub(SDL_Surface *surface, PG_PixelFormat *fmt,
     int ppa;
     SDL_BlendMode mode;
     SDL_GetSurfaceBlendMode(surface, &mode);
-
+    PG_PixelFormat *fmt;
+    SDL_Palette *palette;
+    if (!PG_GetSurfaceDetails(surface, &fmt, &palette)) {
+        return -1;
+    }
     ppa = (fmt->Amask && mode != SDL_BLENDMODE_NONE);
 
     pixels = (Uint8 *)surface->pixels + (Uint16)rect->y * surface->pitch +
@@ -268,8 +274,7 @@ surface_fill_blend_sub(SDL_Surface *surface, PG_PixelFormat *fmt,
 }
 
 static int
-surface_fill_blend_mult(SDL_Surface *surface, PG_PixelFormat *fmt,
-                        SDL_Palette *palette, SDL_Rect *rect, Uint32 color)
+surface_fill_blend_mult(SDL_Surface *surface, SDL_Rect *rect, Uint32 color)
 {
     Uint8 *pixels;
     int width = rect->w;
@@ -283,7 +288,11 @@ surface_fill_blend_mult(SDL_Surface *surface, PG_PixelFormat *fmt,
     int ppa;
     SDL_BlendMode mode;
     SDL_GetSurfaceBlendMode(surface, &mode);
-
+    PG_PixelFormat *fmt;
+    SDL_Palette *palette;
+    if (!PG_GetSurfaceDetails(surface, &fmt, &palette)) {
+        return -1;
+    }
     ppa = (fmt->Amask && mode != SDL_BLENDMODE_NONE);
 
     pixels = (Uint8 *)surface->pixels + (Uint16)rect->y * surface->pitch +
@@ -356,8 +365,7 @@ surface_fill_blend_mult(SDL_Surface *surface, PG_PixelFormat *fmt,
 }
 
 static int
-surface_fill_blend_min(SDL_Surface *surface, PG_PixelFormat *fmt,
-                       SDL_Palette *palette, SDL_Rect *rect, Uint32 color)
+surface_fill_blend_min(SDL_Surface *surface, SDL_Rect *rect, Uint32 color)
 {
     Uint8 *pixels;
     int width = rect->w;
@@ -371,7 +379,11 @@ surface_fill_blend_min(SDL_Surface *surface, PG_PixelFormat *fmt,
     int ppa;
     SDL_BlendMode mode;
     SDL_GetSurfaceBlendMode(surface, &mode);
-
+    PG_PixelFormat *fmt;
+    SDL_Palette *palette;
+    if (!PG_GetSurfaceDetails(surface, &fmt, &palette)) {
+        return -1;
+    }
     ppa = (fmt->Amask && mode != SDL_BLENDMODE_NONE);
 
     pixels = (Uint8 *)surface->pixels + (Uint16)rect->y * surface->pitch +
@@ -444,8 +456,7 @@ surface_fill_blend_min(SDL_Surface *surface, PG_PixelFormat *fmt,
 }
 
 static int
-surface_fill_blend_max(SDL_Surface *surface, PG_PixelFormat *fmt,
-                       SDL_Palette *palette, SDL_Rect *rect, Uint32 color)
+surface_fill_blend_max(SDL_Surface *surface, SDL_Rect *rect, Uint32 color)
 {
     Uint8 *pixels;
     int width = rect->w;
@@ -459,7 +470,11 @@ surface_fill_blend_max(SDL_Surface *surface, PG_PixelFormat *fmt,
     int ppa;
     SDL_BlendMode mode;
     SDL_GetSurfaceBlendMode(surface, &mode);
-
+    PG_PixelFormat *fmt;
+    SDL_Palette *palette;
+    if (!PG_GetSurfaceDetails(surface, &fmt, &palette)) {
+        return -1;
+    }
     ppa = (fmt->Amask && mode != SDL_BLENDMODE_NONE);
 
     pixels = (Uint8 *)surface->pixels + (Uint16)rect->y * surface->pitch +
@@ -534,8 +549,7 @@ surface_fill_blend_max(SDL_Surface *surface, PG_PixelFormat *fmt,
 /* ------------------------- */
 
 static int
-surface_fill_blend_rgba_add(SDL_Surface *surface, PG_PixelFormat *fmt,
-                            SDL_Palette *palette, SDL_Rect *rect, Uint32 color)
+surface_fill_blend_rgba_add(SDL_Surface *surface, SDL_Rect *rect, Uint32 color)
 {
     Uint8 *pixels;
     int width = rect->w;
@@ -550,11 +564,15 @@ surface_fill_blend_rgba_add(SDL_Surface *surface, PG_PixelFormat *fmt,
     int ppa;
     SDL_BlendMode mode;
     SDL_GetSurfaceBlendMode(surface, &mode);
-
+    PG_PixelFormat *fmt;
+    SDL_Palette *palette;
+    if (!PG_GetSurfaceDetails(surface, &fmt, &palette)) {
+        return -1;
+    }
     ppa = (fmt->Amask && mode != SDL_BLENDMODE_NONE);
 
     if (!ppa) {
-        return surface_fill_blend_add(surface, fmt, palette, rect, color);
+        return surface_fill_blend_add(surface, rect, color);
     }
 
     pixels = (Uint8 *)surface->pixels + (Uint16)rect->y * surface->pitch +
@@ -605,8 +623,7 @@ surface_fill_blend_rgba_add(SDL_Surface *surface, PG_PixelFormat *fmt,
 }
 
 static int
-surface_fill_blend_rgba_sub(SDL_Surface *surface, PG_PixelFormat *fmt,
-                            SDL_Palette *palette, SDL_Rect *rect, Uint32 color)
+surface_fill_blend_rgba_sub(SDL_Surface *surface, SDL_Rect *rect, Uint32 color)
 {
     Uint8 *pixels;
     int width = rect->w;
@@ -621,11 +638,15 @@ surface_fill_blend_rgba_sub(SDL_Surface *surface, PG_PixelFormat *fmt,
     int ppa;
     SDL_BlendMode mode;
     SDL_GetSurfaceBlendMode(surface, &mode);
-
+    PG_PixelFormat *fmt;
+    SDL_Palette *palette;
+    if (!PG_GetSurfaceDetails(surface, &fmt, &palette)) {
+        return -1;
+    }
     ppa = (fmt->Amask && mode != SDL_BLENDMODE_NONE);
 
     if (!ppa) {
-        return surface_fill_blend_sub(surface, fmt, palette, rect, color);
+        return surface_fill_blend_sub(surface, rect, color);
     }
 
     pixels = (Uint8 *)surface->pixels + (Uint16)rect->y * surface->pitch +
@@ -676,8 +697,7 @@ surface_fill_blend_rgba_sub(SDL_Surface *surface, PG_PixelFormat *fmt,
 }
 
 static int
-surface_fill_blend_rgba_mult(SDL_Surface *surface, PG_PixelFormat *fmt,
-                             SDL_Palette *palette, SDL_Rect *rect,
+surface_fill_blend_rgba_mult(SDL_Surface *surface, SDL_Rect *rect,
                              Uint32 color)
 {
     Uint8 *pixels;
@@ -692,11 +712,15 @@ surface_fill_blend_rgba_mult(SDL_Surface *surface, PG_PixelFormat *fmt,
     int ppa;
     SDL_BlendMode mode;
     SDL_GetSurfaceBlendMode(surface, &mode);
-
+    PG_PixelFormat *fmt;
+    SDL_Palette *palette;
+    if (!PG_GetSurfaceDetails(surface, &fmt, &palette)) {
+        return -1;
+    }
     ppa = (fmt->Amask && mode != SDL_BLENDMODE_NONE);
 
     if (!ppa) {
-        return surface_fill_blend_mult(surface, fmt, palette, rect, color);
+        return surface_fill_blend_mult(surface, rect, color);
     }
 
     pixels = (Uint8 *)surface->pixels + (Uint16)rect->y * surface->pitch +
@@ -747,8 +771,7 @@ surface_fill_blend_rgba_mult(SDL_Surface *surface, PG_PixelFormat *fmt,
 }
 
 static int
-surface_fill_blend_rgba_min(SDL_Surface *surface, PG_PixelFormat *fmt,
-                            SDL_Palette *palette, SDL_Rect *rect, Uint32 color)
+surface_fill_blend_rgba_min(SDL_Surface *surface, SDL_Rect *rect, Uint32 color)
 {
     Uint8 *pixels;
     int width = rect->w;
@@ -762,11 +785,15 @@ surface_fill_blend_rgba_min(SDL_Surface *surface, PG_PixelFormat *fmt,
     int ppa;
     SDL_BlendMode mode;
     SDL_GetSurfaceBlendMode(surface, &mode);
-
+    PG_PixelFormat *fmt;
+    SDL_Palette *palette;
+    if (!PG_GetSurfaceDetails(surface, &fmt, &palette)) {
+        return -1;
+    }
     ppa = (fmt->Amask && mode != SDL_BLENDMODE_NONE);
 
     if (!ppa) {
-        return surface_fill_blend_min(surface, fmt, palette, rect, color);
+        return surface_fill_blend_min(surface, rect, color);
     }
 
     pixels = (Uint8 *)surface->pixels + (Uint16)rect->y * surface->pitch +
@@ -817,8 +844,7 @@ surface_fill_blend_rgba_min(SDL_Surface *surface, PG_PixelFormat *fmt,
 }
 
 static int
-surface_fill_blend_rgba_max(SDL_Surface *surface, PG_PixelFormat *fmt,
-                            SDL_Palette *palette, SDL_Rect *rect, Uint32 color)
+surface_fill_blend_rgba_max(SDL_Surface *surface, SDL_Rect *rect, Uint32 color)
 {
     Uint8 *pixels;
     int width = rect->w;
@@ -832,11 +858,15 @@ surface_fill_blend_rgba_max(SDL_Surface *surface, PG_PixelFormat *fmt,
     int ppa;
     SDL_BlendMode mode;
     SDL_GetSurfaceBlendMode(surface, &mode);
-
+    PG_PixelFormat *fmt;
+    SDL_Palette *palette;
+    if (!PG_GetSurfaceDetails(surface, &fmt, &palette)) {
+        return -1;
+    }
     ppa = (fmt->Amask && mode != SDL_BLENDMODE_NONE);
 
     if (!ppa) {
-        return surface_fill_blend_max(surface, fmt, palette, rect, color);
+        return surface_fill_blend_max(surface, rect, color);
     }
 
     pixels = (Uint8 *)surface->pixels + (Uint16)rect->y * surface->pitch +
@@ -903,34 +933,25 @@ surface_fill_blend(SDL_Surface *surface, SDL_Rect *rect, Uint32 color,
         locked = 1;
     }
 
-    PG_PixelFormat *fmt;
-    SDL_Palette *palette;
-    if (!PG_GetSurfaceDetails(surface, &fmt, &palette)) {
-        return -1;
-    }
-
     switch (blendargs) {
         case PYGAME_BLEND_ADD: {
 #if !defined(__EMSCRIPTEN__)
 #if SDL_BYTEORDER == SDL_LIL_ENDIAN
             if (PG_SURF_BytesPerPixel(surface) == 4) {
                 if (_pg_has_avx2()) {
-                    result =
-                        surface_fill_blend_add_avx2(surface, fmt, rect, color);
+                    result = surface_fill_blend_add_avx2(surface, rect, color);
                     break;
                 }
 #if PG_ENABLE_SSE_NEON
                 if (_pg_HasSSE_NEON()) {
-                    result =
-                        surface_fill_blend_add_sse2(surface, fmt, rect, color);
+                    result = surface_fill_blend_add_sse2(surface, rect, color);
                     break;
                 }
 #endif /* PG_ENABLE_SSE_NEON */
             }
 #endif /* SDL_BYTEORDER == SDL_LIL_ENDIAN */
 #endif /* __EMSCRIPTEN__ */
-            result =
-                surface_fill_blend_add(surface, fmt, palette, rect, color);
+            result = surface_fill_blend_add(surface, rect, color);
             break;
         }
         case PYGAME_BLEND_SUB: {
@@ -938,22 +959,19 @@ surface_fill_blend(SDL_Surface *surface, SDL_Rect *rect, Uint32 color,
 #if SDL_BYTEORDER == SDL_LIL_ENDIAN
             if (PG_SURF_BytesPerPixel(surface) == 4) {
                 if (_pg_has_avx2()) {
-                    result =
-                        surface_fill_blend_sub_avx2(surface, fmt, rect, color);
+                    result = surface_fill_blend_sub_avx2(surface, rect, color);
                     break;
                 }
 #if PG_ENABLE_SSE_NEON
                 if (_pg_HasSSE_NEON()) {
-                    result =
-                        surface_fill_blend_sub_sse2(surface, fmt, rect, color);
+                    result = surface_fill_blend_sub_sse2(surface, rect, color);
                     break;
                 }
 #endif /* PG_ENABLE_SSE_NEON */
             }
 #endif /* SDL_BYTEORDER == SDL_LIL_ENDIAN */
 #endif /* __EMSCRIPTEN__ */
-            result =
-                surface_fill_blend_sub(surface, fmt, palette, rect, color);
+            result = surface_fill_blend_sub(surface, rect, color);
             break;
         }
         case PYGAME_BLEND_MULT: {
@@ -961,22 +979,21 @@ surface_fill_blend(SDL_Surface *surface, SDL_Rect *rect, Uint32 color,
 #if SDL_BYTEORDER == SDL_LIL_ENDIAN
             if (PG_SURF_BytesPerPixel(surface) == 4) {
                 if (_pg_has_avx2()) {
-                    result = surface_fill_blend_mult_avx2(surface, fmt, rect,
-                                                          color);
+                    result =
+                        surface_fill_blend_mult_avx2(surface, rect, color);
                     break;
                 }
 #if PG_ENABLE_SSE_NEON
                 if (_pg_HasSSE_NEON()) {
-                    result = surface_fill_blend_mult_sse2(surface, fmt, rect,
-                                                          color);
+                    result =
+                        surface_fill_blend_mult_sse2(surface, rect, color);
                     break;
                 }
 #endif /* PG_ENABLE_SSE_NEON */
             }
 #endif /* SDL_BYTEORDER == SDL_LIL_ENDIAN */
 #endif /* __EMSCRIPTEN__ */
-            result =
-                surface_fill_blend_mult(surface, fmt, palette, rect, color);
+            result = surface_fill_blend_mult(surface, rect, color);
             break;
         }
         case PYGAME_BLEND_MIN: {
@@ -984,22 +1001,19 @@ surface_fill_blend(SDL_Surface *surface, SDL_Rect *rect, Uint32 color,
 #if SDL_BYTEORDER == SDL_LIL_ENDIAN
             if (PG_SURF_BytesPerPixel(surface) == 4) {
                 if (_pg_has_avx2()) {
-                    result =
-                        surface_fill_blend_min_avx2(surface, fmt, rect, color);
+                    result = surface_fill_blend_min_avx2(surface, rect, color);
                     break;
                 }
 #if PG_ENABLE_SSE_NEON
                 if (_pg_HasSSE_NEON()) {
-                    result =
-                        surface_fill_blend_min_sse2(surface, fmt, rect, color);
+                    result = surface_fill_blend_min_sse2(surface, rect, color);
                     break;
                 }
 #endif /* PG_ENABLE_SSE_NEON */
             }
 #endif /* SDL_BYTEORDER == SDL_LIL_ENDIAN */
 #endif /* __EMSCRIPTEN__ */
-            result =
-                surface_fill_blend_min(surface, fmt, palette, rect, color);
+            result = surface_fill_blend_min(surface, rect, color);
             break;
         }
         case PYGAME_BLEND_MAX: {
@@ -1007,22 +1021,19 @@ surface_fill_blend(SDL_Surface *surface, SDL_Rect *rect, Uint32 color,
 #if SDL_BYTEORDER == SDL_LIL_ENDIAN
             if (PG_SURF_BytesPerPixel(surface) == 4) {
                 if (_pg_has_avx2()) {
-                    result =
-                        surface_fill_blend_max_avx2(surface, fmt, rect, color);
+                    result = surface_fill_blend_max_avx2(surface, rect, color);
                     break;
                 }
 #if PG_ENABLE_SSE_NEON
                 if (_pg_HasSSE_NEON()) {
-                    result =
-                        surface_fill_blend_max_sse2(surface, fmt, rect, color);
+                    result = surface_fill_blend_max_sse2(surface, rect, color);
                     break;
                 }
 #endif /* PG_ENABLE_SSE_NEON */
             }
 #endif /* SDL_BYTEORDER == SDL_LIL_ENDIAN */
 #endif /* __EMSCRIPTEN__ */
-            result =
-                surface_fill_blend_max(surface, fmt, palette, rect, color);
+            result = surface_fill_blend_max(surface, rect, color);
             break;
         }
 
@@ -1031,22 +1042,21 @@ surface_fill_blend(SDL_Surface *surface, SDL_Rect *rect, Uint32 color,
 #if SDL_BYTEORDER == SDL_LIL_ENDIAN
             if (PG_SURF_BytesPerPixel(surface) == 4) {
                 if (_pg_has_avx2()) {
-                    result = surface_fill_blend_rgba_add_avx2(surface, fmt,
-                                                              rect, color);
+                    result =
+                        surface_fill_blend_rgba_add_avx2(surface, rect, color);
                     break;
                 }
 #if PG_ENABLE_SSE_NEON
                 if (_pg_HasSSE_NEON()) {
-                    result = surface_fill_blend_rgba_add_sse2(surface, fmt,
-                                                              rect, color);
+                    result =
+                        surface_fill_blend_rgba_add_sse2(surface, rect, color);
                     break;
                 }
 #endif /* PG_ENABLE_SSE_NEON */
             }
 #endif /* SDL_BYTEORDER == SDL_LIL_ENDIAN */
 #endif /* __EMSCRIPTEN__ */
-            result = surface_fill_blend_rgba_add(surface, fmt, palette, rect,
-                                                 color);
+            result = surface_fill_blend_rgba_add(surface, rect, color);
             break;
         }
         case PYGAME_BLEND_RGBA_SUB: {
@@ -1054,22 +1064,21 @@ surface_fill_blend(SDL_Surface *surface, SDL_Rect *rect, Uint32 color,
 #if SDL_BYTEORDER == SDL_LIL_ENDIAN
             if (PG_SURF_BytesPerPixel(surface) == 4) {
                 if (_pg_has_avx2()) {
-                    result = surface_fill_blend_rgba_sub_avx2(surface, fmt,
-                                                              rect, color);
+                    result =
+                        surface_fill_blend_rgba_sub_avx2(surface, rect, color);
                     break;
                 }
 #if PG_ENABLE_SSE_NEON
                 if (_pg_HasSSE_NEON()) {
-                    result = surface_fill_blend_rgba_sub_sse2(surface, fmt,
-                                                              rect, color);
+                    result =
+                        surface_fill_blend_rgba_sub_sse2(surface, rect, color);
                     break;
                 }
 #endif /* PG_ENABLE_SSE_NEON */
             }
 #endif /* SDL_BYTEORDER == SDL_LIL_ENDIAN */
 #endif /* __EMSCRIPTEN__ */
-            result = surface_fill_blend_rgba_sub(surface, fmt, palette, rect,
-                                                 color);
+            result = surface_fill_blend_rgba_sub(surface, rect, color);
             break;
         }
         case PYGAME_BLEND_RGBA_MULT: {
@@ -1077,22 +1086,21 @@ surface_fill_blend(SDL_Surface *surface, SDL_Rect *rect, Uint32 color,
 #if SDL_BYTEORDER == SDL_LIL_ENDIAN
             if (PG_SURF_BytesPerPixel(surface) == 4) {
                 if (_pg_has_avx2()) {
-                    result = surface_fill_blend_rgba_mult_avx2(surface, fmt,
-                                                               rect, color);
+                    result = surface_fill_blend_rgba_mult_avx2(surface, rect,
+                                                               color);
                     break;
                 }
 #if PG_ENABLE_SSE_NEON
                 if (_pg_HasSSE_NEON()) {
-                    result = surface_fill_blend_rgba_mult_sse2(surface, fmt,
-                                                               rect, color);
+                    result = surface_fill_blend_rgba_mult_sse2(surface, rect,
+                                                               color);
                     break;
                 }
 #endif /* PG_ENABLE_SSE_NEON */
             }
 #endif /* SDL_BYTEORDER == SDL_LIL_ENDIAN */
 #endif /* __EMSCRIPTEN__ */
-            result = surface_fill_blend_rgba_mult(surface, fmt, palette, rect,
-                                                  color);
+            result = surface_fill_blend_rgba_mult(surface, rect, color);
             break;
         }
         case PYGAME_BLEND_RGBA_MIN: {
@@ -1100,22 +1108,21 @@ surface_fill_blend(SDL_Surface *surface, SDL_Rect *rect, Uint32 color,
 #if SDL_BYTEORDER == SDL_LIL_ENDIAN
             if (PG_SURF_BytesPerPixel(surface) == 4) {
                 if (_pg_has_avx2()) {
-                    result = surface_fill_blend_rgba_min_avx2(surface, fmt,
-                                                              rect, color);
+                    result =
+                        surface_fill_blend_rgba_min_avx2(surface, rect, color);
                     break;
                 }
 #if PG_ENABLE_SSE_NEON
                 if (_pg_HasSSE_NEON()) {
-                    result = surface_fill_blend_rgba_min_sse2(surface, fmt,
-                                                              rect, color);
+                    result =
+                        surface_fill_blend_rgba_min_sse2(surface, rect, color);
                     break;
                 }
 #endif /* PG_ENABLE_SSE_NEON */
             }
 #endif /* SDL_BYTEORDER == SDL_LIL_ENDIAN */
 #endif /* __EMSCRIPTEN__ */
-            result = surface_fill_blend_rgba_min(surface, fmt, palette, rect,
-                                                 color);
+            result = surface_fill_blend_rgba_min(surface, rect, color);
             break;
         }
         case PYGAME_BLEND_RGBA_MAX: {
@@ -1123,22 +1130,21 @@ surface_fill_blend(SDL_Surface *surface, SDL_Rect *rect, Uint32 color,
 #if SDL_BYTEORDER == SDL_LIL_ENDIAN
             if (PG_SURF_BytesPerPixel(surface) == 4) {
                 if (_pg_has_avx2()) {
-                    result = surface_fill_blend_rgba_max_avx2(surface, fmt,
-                                                              rect, color);
+                    result =
+                        surface_fill_blend_rgba_max_avx2(surface, rect, color);
                     break;
                 }
 #if PG_ENABLE_SSE_NEON
                 if (_pg_HasSSE_NEON()) {
-                    result = surface_fill_blend_rgba_max_sse2(surface, fmt,
-                                                              rect, color);
+                    result =
+                        surface_fill_blend_rgba_max_sse2(surface, rect, color);
                     break;
                 }
 #endif /* PG_ENABLE_SSE_NEON */
             }
 #endif /* SDL_BYTEORDER == SDL_LIL_ENDIAN */
 #endif /* __EMSCRIPTEN__ */
-            result = surface_fill_blend_rgba_max(surface, fmt, palette, rect,
-                                                 color);
+            result = surface_fill_blend_rgba_max(surface, rect, color);
             break;
         }
 
