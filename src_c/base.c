@@ -2315,15 +2315,6 @@ import_pygame_color(void)
 {
 }
 
-void
-import_pygame_font(void)
-{
-}
-
-void
-import_pygame_freetype(void)
-{
-}
 
 void
 import_pygame_bufferproxy(void)

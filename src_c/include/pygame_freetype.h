@@ -24,19 +24,4 @@
 #include "pgimport.h"
 #include "pgcompat.h"
 
-#ifndef PYGAME_FREETYPE_INTERNAL
-
-PYGAMEAPI_DEFINE_SLOTS(_freetype);
-
-#define pgFont_Type (*(PyTypeObject *)PYGAMEAPI_GET_SLOT(_freetype, 0))
-
-#define pgFont_Check(x) ((x)->ob_type == &pgFont_Type)
-
-#define pgFont_New \
-    (*(PyObject * (*)(const char *, long)) PYGAMEAPI_GET_SLOT(_freetype, 1))
-
-#define import_pygame_freetype() _IMPORT_PYGAME_MODULE(_freetype)
-
-#endif /* PYGAME_FREETYPE_INTERNAL */
-
 #endif /* PYGAME_FREETYPE_H_ */

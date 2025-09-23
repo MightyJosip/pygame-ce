@@ -2340,8 +2340,7 @@ struct PyModuleDef _freetypemodule = {
 
 MODINIT_DEFINE(_freetype)
 {
-    PyObject *module, *apiobj;
-    static void *c_api[PYGAMEAPI_FREETYPE_NUMSLOTS];
+    PyObject *module;
 
     import_pygame_base();
     if (PyErr_Occurred()) {
@@ -2395,20 +2394,6 @@ MODINIT_DEFINE(_freetype)
     DEC_CONST(BBOX_EXACT_GRIDFIT);
     DEC_CONST(BBOX_PIXEL);
     DEC_CONST(BBOX_PIXEL_GRIDFIT);
-
-    /* export the c api */
-#if PYGAMEAPI_FREETYPE_NUMSLOTS != 2
-#error Mismatch between number of api slots and actual exports.
-#endif
-    c_api[0] = &pgFont_Type;
-    c_api[1] = &pgFont_New;
-
-    apiobj = encapsulate_api(c_api, "freetype");
-    if (PyModule_AddObject(module, PYGAMEAPI_LOCAL_ENTRY, apiobj)) {
-        Py_XDECREF(apiobj);
-        Py_DECREF(module);
-        return NULL;
-    }
 
     return module;
 }
