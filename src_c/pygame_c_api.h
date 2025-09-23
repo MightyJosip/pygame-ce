@@ -60,4 +60,20 @@ pgSurface_LockBy(pgSurfaceObject *surfobj, PyObject *lockobj);
 SURFLOCK_API int
 pgSurface_UnlockBy(pgSurfaceObject *surfobj, PyObject *lockobj);
 
+/* JOYSTICK */
+// Only export when building the module that contains the implementation
+#ifdef PYGAMEAPI_JOYSTICK_INTERNAL
+#define JOYSTICK_API API_EXPORT
+#else
+#define JOYSTICK_API extern
+#endif
+
+JOYSTICK_API PyTypeObject pgJoystick_Type;
+
+JOYSTICK_API PyObject *
+pgJoystick_New(int id);
+
+JOYSTICK_API int
+pgJoystick_GetDeviceIndexByInstanceID(int instance_id);
+
 #endif /* !PYGAME_C_API_H */

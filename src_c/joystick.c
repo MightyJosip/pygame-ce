@@ -28,7 +28,7 @@
 #include "doc/joystick_doc.h"
 
 static pgJoystickObject *joylist_head = NULL;
-static PyTypeObject pgJoystick_Type;
+API_EXPORT PyTypeObject pgJoystick_Type;
 static PyObject *
 pgJoystick_New(int);
 static int
@@ -598,7 +598,7 @@ static PyMethodDef joy_methods[] = {
 
     {NULL, NULL, 0, NULL}};
 
-static PyTypeObject pgJoystick_Type = {
+API_EXPORT PyTypeObject pgJoystick_Type = {
     PyVarObject_HEAD_INIT(NULL, 0).tp_name = "pygame.joystick.Joystick",
     .tp_basicsize = sizeof(pgJoystickObject),
     .tp_dealloc = joy_dealloc,
@@ -606,7 +606,7 @@ static PyTypeObject pgJoystick_Type = {
     .tp_methods = joy_methods,
 };
 
-static int
+API_EXPORT int
 pgJoystick_GetDeviceIndexByInstanceID(int instance_id)
 {
     pgJoystickObject *cur;
@@ -620,7 +620,7 @@ pgJoystick_GetDeviceIndexByInstanceID(int instance_id)
     return -1;
 }
 
-static PyObject *
+API_EXPORT PyObject *
 pgJoystick_New(int id)
 {
     pgJoystickObject *jstick, *cur;
@@ -679,8 +679,7 @@ static PyMethodDef _joystick_methods[] = {
 
 MODINIT_DEFINE(joystick)
 {
-    PyObject *module, *apiobj;
-    static void *c_api[PYGAMEAPI_JOYSTICK_NUMSLOTS];
+    PyObject *module;
 
     static struct PyModuleDef _module = {PyModuleDef_HEAD_INIT,
                                          "joystick",
@@ -722,15 +721,5 @@ MODINIT_DEFINE(joystick)
         return NULL;
     }
 
-    /* export the c api */
-    c_api[0] = &pgJoystick_Type;
-    c_api[1] = pgJoystick_New;
-    c_api[2] = pgJoystick_GetDeviceIndexByInstanceID;
-    apiobj = encapsulate_api(c_api, "joystick");
-    if (PyModule_AddObject(module, PYGAMEAPI_LOCAL_ENTRY, apiobj)) {
-        Py_XDECREF(apiobj);
-        Py_DECREF(module);
-        return NULL;
-    }
     return module;
 }

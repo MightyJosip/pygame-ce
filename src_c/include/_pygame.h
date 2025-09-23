@@ -260,14 +260,7 @@ typedef struct pgJoystickObject {
 #define pgJoystick_AsSDL(x) (((pgJoystickObject *)x)->joy)
 
 #ifndef PYGAMEAPI_JOYSTICK_INTERNAL
-#define pgJoystick_Type (*(PyTypeObject *)PYGAMEAPI_GET_SLOT(joystick, 0))
-
 #define pgJoystick_Check(x) ((x)->ob_type == &pgJoystick_Type)
-#define pgJoystick_New (*(PyObject * (*)(int)) PYGAMEAPI_GET_SLOT(joystick, 1))
-#define pgJoystick_GetDeviceIndexByInstanceID \
-    (*(int (*)(int))PYGAMEAPI_GET_SLOT(joystick, 2))
-
-#define import_pygame_joystick() IMPORT_PYGAME_MODULE(joystick)
 #endif
 
 /*

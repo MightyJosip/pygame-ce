@@ -604,11 +604,6 @@ MODINIT_DEFINE(controller)
         return NULL;
     }
 
-    import_pygame_joystick();
-    if (PyErr_Occurred()) {
-        return NULL;
-    }
-
     module = PyModule_Create(&_module);
 #if Py_GIL_DISABLED
 #if (defined(__EMSCRIPTEN__) || defined(__wasi__))

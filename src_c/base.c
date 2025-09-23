@@ -2335,15 +2335,6 @@ import_pygame_event(void)
 {
 }
 
-#ifdef import_pygame_joystick
-#undef import_pygame_joystick
-#endif
-
-void
-import_pygame_joystick(void)
-{
-}
-
 #undef import_pygame_imageext
 #undef import_pygame_render
 #undef import_pygame_pixelarray

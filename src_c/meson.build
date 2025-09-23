@@ -2,7 +2,7 @@
 
 c_api = static_library(
     'c_api',
-    ['rwobject.c', 'surflock.c'],
+    ['rwobject.c', 'surflock.c', 'joystick.c'],
     dependencies: pg_base_deps,
     c_args: warnings_error
 )
@@ -48,6 +48,7 @@ event = py.extension_module(
     'event.c',
     c_args: warnings_error,
     dependencies: pg_base_deps,
+    link_with: c_api,
     install: true,
     subdir: pg,
 )

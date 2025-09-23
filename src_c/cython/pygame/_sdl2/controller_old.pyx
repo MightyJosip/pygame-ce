@@ -4,7 +4,6 @@ cimport cython
 cdef extern from "../pygame.h" nogil:
     int pgJoystick_Check(object joy)
     object pgJoystick_New(int);
-    void import_pygame_joystick()
     void pg_RegisterQuit(object)
     void JOYSTICK_INIT_CHECK()
 
@@ -12,7 +11,6 @@ cdef extern from "SDL.h" nogil:
     void SDL_free(void *mem)
     int SDL_VERSION_ATLEAST(int major, int minor, int patch)
 
-import_pygame_joystick()
 
 def _gamecontroller_init_check():
     if not SDL_WasInit(_SDL_INIT_GAMECONTROLLER):

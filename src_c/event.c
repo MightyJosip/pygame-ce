@@ -2585,11 +2585,6 @@ MODINIT_DEFINE(event)
         return NULL;
     }
 
-    import_pygame_joystick();
-    if (PyErr_Occurred()) {
-        return NULL;
-    }
-
     /* type preparation */
     if (PyType_Ready(&pgEvent_Type) < 0) {
         return NULL;
