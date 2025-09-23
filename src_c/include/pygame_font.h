@@ -32,20 +32,3 @@ typedef struct {
     unsigned int ttf_init_generation;
 } PyFontObject;
 #define PyFont_AsFont(x) (((PyFontObject *)x)->font)
-
-#ifndef PYGAMEAPI_FONT_INTERNAL
-
-#include "pgimport.h"
-
-PYGAMEAPI_DEFINE_SLOTS(font);
-
-#define PyFont_Type (*(PyTypeObject *)PYGAMEAPI_GET_SLOT(font, 0))
-#define PyFont_Check(x) ((x)->ob_type == &PyFont_Type)
-
-#define PyFont_New (*(PyObject * (*)(TTF_Font *)) PYGAMEAPI_GET_SLOT(font, 1))
-
-/*slot 2 taken by FONT_INIT_CHECK*/
-
-#define import_pygame_font() _IMPORT_PYGAME_MODULE(font)
-
-#endif
