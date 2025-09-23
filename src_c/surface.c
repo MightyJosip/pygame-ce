@@ -4650,10 +4650,6 @@ exec_surface(PyObject *module)
     if (PyErr_Occurred()) {
         return -1;
     }
-    _IMPORT_PYGAME_MODULE(surflock);
-    if (PyErr_Occurred()) {
-        return -1;
-    }
 
     /* type preparation */
     if (PyType_Ready(&pgSurface_Type) < 0) {

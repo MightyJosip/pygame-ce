@@ -2,7 +2,7 @@
 
 c_api = static_library(
     'c_api',
-    ['rwobject.c'],
+    ['rwobject.c', 'surflock.c'],
     dependencies: pg_base_deps,
     c_args: warnings_error
 )
@@ -129,6 +129,7 @@ surface = py.extension_module(
         simd_blitters_sse2,
         simd_surface_fill_avx2,
         simd_surface_fill_sse2,
+        c_api
     ],
     dependencies: pg_base_deps,
     install: true,
@@ -167,6 +168,7 @@ draw = py.extension_module(
     'draw.c',
     c_args: warnings_error,
     dependencies: pg_base_deps,
+    link_with: c_api,
     install: true,
     subdir: pg,
 )
@@ -215,7 +217,7 @@ transform = py.extension_module(
     'transform',
     transform_sources,
     c_args: warnings_error,
-    link_with: [simd_transform_avx2, simd_transform_sse2],
+    link_with: [simd_transform_avx2, simd_transform_sse2, c_api],
     objects: transform_objs,
     dependencies: pg_base_deps,
     install: true,
@@ -227,6 +229,7 @@ mask = py.extension_module(
     ['mask.c', 'bitmask.c'],
     c_args: warnings_error + warnings_temp_mask,
     dependencies: pg_base_deps,
+    link_with: c_api,
     install: true,
     subdir: pg,
 )
@@ -245,6 +248,7 @@ pixelarray = py.extension_module(
     'pixelarray.c',
     c_args: warnings_error,
     dependencies: pg_base_deps,
+    link_with: c_api,
     install: true,
     subdir: pg,
 )
@@ -263,6 +267,7 @@ pixelcopy = py.extension_module(
     'pixelcopy.c',
     c_args: warnings_error,
     dependencies: pg_base_deps,
+    link_with: c_api,
     install: true,
     subdir: pg,
 )
@@ -362,6 +367,7 @@ _camera = py.extension_module(
     c_args: warnings_error,
     dependencies: pg_base_deps,
     link_args: pg_camera_link,
+    link_with: c_api,
     install: true,
     subdir: pg,
 )

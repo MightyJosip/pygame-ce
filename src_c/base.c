@@ -2642,13 +2642,6 @@ PyInit_pygame_static()
 #include "rect.c"
 #include "pgcompat_rect.c"
 
-#undef pgSurface_Lock
-#undef pgSurface_Unlock
-#undef pgSurface_LockBy
-#undef pgSurface_UnlockBy
-#undef pgSurface_Prep
-#undef pgSurface_Unprep
-
 #include "surflock.c"
 
 #undef pgColor_New
@@ -2680,13 +2673,6 @@ PyInit_pygame_static()
 #include "display.c"
 
 #include "draw.c"
-
-#undef pg_EncodeString
-#undef pg_EncodeFilePath
-#undef pgRWops_IsFileObject
-#undef pgRWops_GetFileExtension
-#undef pgRWops_FromFileObject
-#undef pgRWops_FromObject
 
 #include "rwobject.c"
 

@@ -30,16 +30,16 @@
 
 #include "pgcompat.h"
 
-static int
+API_EXPORT int
 pgSurface_Lock(pgSurfaceObject *);
-static int
+API_EXPORT int
 pgSurface_Unlock(pgSurfaceObject *);
-static int
+API_EXPORT int
 pgSurface_LockBy(pgSurfaceObject *, PyObject *);
-static int
+API_EXPORT int
 pgSurface_UnlockBy(pgSurfaceObject *, PyObject *);
 
-static void
+API_EXPORT void
 pgSurface_Prep(pgSurfaceObject *surfobj)
 {
     struct pgSubSurface_Data *data = ((pgSurfaceObject *)surfobj)->subsurface;
@@ -48,7 +48,7 @@ pgSurface_Prep(pgSurfaceObject *surfobj)
     }
 }
 
-static void
+API_EXPORT void
 pgSurface_Unprep(pgSurfaceObject *surfobj)
 {
     struct pgSubSurface_Data *data = ((pgSurfaceObject *)surfobj)->subsurface;
@@ -58,19 +58,19 @@ pgSurface_Unprep(pgSurfaceObject *surfobj)
     }
 }
 
-static int
+API_EXPORT int
 pgSurface_Lock(pgSurfaceObject *surfobj)
 {
     return pgSurface_LockBy(surfobj, (PyObject *)surfobj);
 }
 
-static int
+API_EXPORT int
 pgSurface_Unlock(pgSurfaceObject *surfobj)
 {
     return pgSurface_UnlockBy(surfobj, (PyObject *)surfobj);
 }
 
-static int
+API_EXPORT int
 pgSurface_LockBy(pgSurfaceObject *surfobj, PyObject *lockobj)
 {
     PyObject *ref;
@@ -106,7 +106,7 @@ pgSurface_LockBy(pgSurfaceObject *surfobj, PyObject *lockobj)
     return 1;
 }
 
-static int
+API_EXPORT int
 pgSurface_UnlockBy(pgSurfaceObject *surfobj, PyObject *lockobj)
 {
     PG_DECLARE_EXCEPTION_SAVER
@@ -202,8 +202,7 @@ static PyMethodDef _surflock_methods[] = {{NULL, NULL, 0, NULL}};
 
 MODINIT_DEFINE(surflock)
 {
-    PyObject *module, *apiobj;
-    static void *c_api[PYGAMEAPI_SURFLOCK_NUMSLOTS];
+    PyObject *module;
 
     static struct PyModuleDef _module = {PyModuleDef_HEAD_INIT,
                                          "surflock",
@@ -221,18 +220,5 @@ MODINIT_DEFINE(surflock)
         return NULL;
     }
 
-    /* export the c api */
-    c_api[0] = pgSurface_Prep;
-    c_api[1] = pgSurface_Unprep;
-    c_api[2] = pgSurface_Lock;
-    c_api[3] = pgSurface_Unlock;
-    c_api[4] = pgSurface_LockBy;
-    c_api[5] = pgSurface_UnlockBy;
-    apiobj = encapsulate_api(c_api, "surflock");
-    if (PyModule_AddObject(module, PYGAMEAPI_LOCAL_ENTRY, apiobj)) {
-        Py_XDECREF(apiobj);
-        Py_DECREF(module);
-        return NULL;
-    }
     return module;
 }
