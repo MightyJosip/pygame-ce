@@ -1949,10 +1949,6 @@ MODINIT_DEFINE(image)
     if (PyErr_Occurred()) {
         return NULL;
     }
-    import_pygame_rwobject();
-    if (PyErr_Occurred()) {
-        return NULL;
-    }
 
     /* create the module */
     module = PyModule_Create(&_module);

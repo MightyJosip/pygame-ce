@@ -1,5 +1,12 @@
 # first the "required" modules
 
+c_api = static_library(
+    'c_api',
+    ['rwobject.c'],
+    dependencies: pg_base_deps,
+    c_args: warnings_error
+)
+
 base = py.extension_module(
     'base',
     'base.c',
@@ -169,6 +176,7 @@ image = py.extension_module(
     'image.c',
     c_args: warnings_error,
     dependencies: pg_base_deps,
+    link_with: c_api,
     install: true,
     subdir: pg,
 )
@@ -382,6 +390,7 @@ if sdl_image_dep.found()
         'imageext.c',
         c_args: warnings_error,
         dependencies: pg_base_deps + sdl_image_dep,
+        link_with: c_api,
         install: true,
         subdir: pg,
     )
@@ -393,6 +402,7 @@ if sdl_ttf_dep.found()
         'font.c',
         c_args: warnings_error,
         dependencies: pg_base_deps + sdl_ttf_dep,
+        link_with: c_api,
         install: true,
         subdir: pg,
     )
@@ -407,6 +417,7 @@ if sdl_mixer_dep.found()
         'mixer.c',
         c_args: warnings_error,
         dependencies: pg_base_deps + sdl_mixer_dep,
+        link_with: c_api,
         install: true,
         subdir: pg,
     )
@@ -416,6 +427,7 @@ if sdl_mixer_dep.found()
         'music.c',
         c_args: warnings_error,
         dependencies: pg_base_deps + sdl_mixer_dep,
+        link_with: c_api,
         install: true,
         subdir: pg,
     )
@@ -437,6 +449,7 @@ if freetype_dep.found()
         ],
         c_args: warnings_error + warnings_temp_freetype,
         dependencies: pg_base_deps + freetype_dep,
+        link_with: c_api,
         install: true,
         subdir: pg,
     )

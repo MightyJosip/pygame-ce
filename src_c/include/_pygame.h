@@ -423,31 +423,6 @@ typedef struct pgEventObject pgEventObject;
 #endif
 
 /*
- * RWOBJECT module
- * the rwobject are only needed for C side work, not accessible from python.
- */
-#ifndef PYGAMEAPI_RWOBJECT_INTERNAL
-#define pgRWops_FromObject \
-    (*(SDL_RWops * (*)(PyObject *, char **)) PYGAMEAPI_GET_SLOT(rwobject, 0))
-
-#define pgRWops_IsFileObject \
-    (*(int (*)(SDL_RWops *))PYGAMEAPI_GET_SLOT(rwobject, 1))
-
-#define pg_EncodeFilePath \
-    (*(PyObject * (*)(PyObject *, PyObject *)) PYGAMEAPI_GET_SLOT(rwobject, 2))
-
-#define pg_EncodeString                                                    \
-    (*(PyObject * (*)(PyObject *, const char *, const char *, PyObject *)) \
-         PYGAMEAPI_GET_SLOT(rwobject, 3))
-
-#define pgRWops_FromFileObject \
-    (*(SDL_RWops * (*)(PyObject *)) PYGAMEAPI_GET_SLOT(rwobject, 4))
-
-#define import_pygame_rwobject() IMPORT_PYGAME_MODULE(rwobject)
-
-#endif
-
-/*
  * PixelArray module
  */
 #ifndef PYGAMEAPI_PIXELARRAY_INTERNAL

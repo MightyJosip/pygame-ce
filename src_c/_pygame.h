@@ -716,6 +716,7 @@ typedef enum {
  * include public API
  */
 #include "include/_pygame.h"
+#include "pygame_c_api.h"
 
 /* Slot counts.
  * Remember to keep these constants up to date.
@@ -726,7 +727,6 @@ typedef enum {
 #define PYGAMEAPI_DISPLAY_NUMSLOTS 2
 #define PYGAMEAPI_SURFACE_NUMSLOTS 4
 #define PYGAMEAPI_SURFLOCK_NUMSLOTS 6
-#define PYGAMEAPI_RWOBJECT_NUMSLOTS 5
 #define PYGAMEAPI_PIXELARRAY_NUMSLOTS 2
 #define PYGAMEAPI_COLOR_NUMSLOTS 5
 #define PYGAMEAPI_BASE_NUMSLOTS 30

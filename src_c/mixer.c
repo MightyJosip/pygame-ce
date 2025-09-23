@@ -2073,10 +2073,6 @@ MODINIT_DEFINE(mixer)
     if (PyErr_Occurred()) {
         return NULL;
     }
-    import_pygame_rwobject();
-    if (PyErr_Occurred()) {
-        return NULL;
-    }
     import_pygame_event();
     if (PyErr_Occurred()) {
         return NULL;

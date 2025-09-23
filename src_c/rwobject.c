@@ -173,7 +173,7 @@ _trydecode_pathlibobj(PyObject *obj)
     return ret;
 }
 
-static PyObject *
+API_EXPORT PyObject *
 pg_EncodeString(PyObject *obj, const char *encoding, const char *errors,
                 PyObject *eclass)
 {
@@ -243,7 +243,7 @@ pg_EncodeString(PyObject *obj, const char *encoding, const char *errors,
     Py_RETURN_NONE;
 }
 
-static PyObject *
+API_EXPORT PyObject *
 pg_EncodeFilePath(PyObject *obj, PyObject *eclass)
 {
     /* All of this code is a replacement for Py_FileSystemDefaultEncoding,
@@ -302,7 +302,7 @@ pg_EncodeFilePath(PyObject *obj, PyObject *eclass)
     return result;
 }
 
-static int
+API_EXPORT int
 pgRWops_IsFileObject(SDL_RWops *rw)
 {
 #if SDL_VERSION_ATLEAST(3, 0, 0)
@@ -479,7 +479,7 @@ _pg_rw_close(SDL_RWops *context)
     return retval;
 }
 
-static SDL_RWops *
+API_EXPORT SDL_RWops *
 pgRWops_FromFileObject(PyObject *obj)
 {
     SDL_RWops *rw;
@@ -756,7 +756,7 @@ simple_case:
     return NULL;
 }
 
-static SDL_RWops *
+API_EXPORT SDL_RWops *
 pgRWops_FromObject(PyObject *obj, char **extptr)
 {
 #if __EMSCRIPTEN__
@@ -851,8 +851,7 @@ static PyMethodDef _pg_rwobject_methods[] = {
 
 MODINIT_DEFINE(rwobject)
 {
-    PyObject *module, *apiobj;
-    static void *c_api[PYGAMEAPI_RWOBJECT_NUMSLOTS];
+    PyObject *module;
 
     static struct PyModuleDef _module = {PyModuleDef_HEAD_INIT,
                                          "rwobject",
@@ -867,19 +866,6 @@ MODINIT_DEFINE(rwobject)
     /* Create the module and add the functions */
     module = PyModule_Create(&_module);
     if (module == NULL) {
-        return NULL;
-    }
-
-    /* export the c api */
-    c_api[0] = pgRWops_FromObject;
-    c_api[1] = pgRWops_IsFileObject;
-    c_api[2] = pg_EncodeFilePath;
-    c_api[3] = pg_EncodeString;
-    c_api[4] = pgRWops_FromFileObject;
-    apiobj = encapsulate_api(c_api, "rwobject");
-    if (PyModule_AddObject(module, PYGAMEAPI_LOCAL_ENTRY, apiobj)) {
-        Py_XDECREF(apiobj);
-        Py_DECREF(module);
         return NULL;
     }
 

@@ -2358,11 +2358,6 @@ MODINIT_DEFINE(_freetype)
         return NULL;
     }
 
-    import_pygame_rwobject();
-    if (PyErr_Occurred()) {
-        return NULL;
-    }
-
     import_pygame_rect();
     if (PyErr_Occurred()) {
         return NULL;
