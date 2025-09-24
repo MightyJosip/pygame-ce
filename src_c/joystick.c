@@ -29,9 +29,9 @@
 
 static pgJoystickObject *joylist_head = NULL;
 API_EXPORT PyTypeObject pgJoystick_Type;
-static PyObject *
+API_EXPORT PyObject *
 pgJoystick_New(int);
-static int
+API_EXPORT int
 pgJoystick_GetDeviceIndexByInstanceID(int);
 #define pgJoystick_Check(x) ((x)->ob_type == &pgJoystick_Type)
 
