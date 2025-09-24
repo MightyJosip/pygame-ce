@@ -296,16 +296,6 @@ typedef struct {
 
 #define pgVidInfo_AsVidInfo(x) (((pgVidInfoObject *)x)->info)
 
-#ifndef PYGAMEAPI_DISPLAY_INTERNAL
-#define pgVidInfo_Type (*(PyTypeObject *)PYGAMEAPI_GET_SLOT(display, 0))
-
-#define pgVidInfo_Check(x) ((x)->ob_type == &pgVidInfo_Type)
-#define pgVidInfo_New \
-    (*(PyObject * (*)(pg_VideoInfo *)) PYGAMEAPI_GET_SLOT(display, 1))
-
-#define import_pygame_display() IMPORT_PYGAME_MODULE(display)
-#endif /* ~PYGAMEAPI_DISPLAY_INTERNAL */
-
 /*
  * SURFACE module
  */
